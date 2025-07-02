@@ -25,6 +25,7 @@ interface HijamaReadingsDialogProps {
   appointmentDate: string;
   appointmentTime: string;
   treatmentConditions: string[];
+  onNavigateToPayment?: (paymentData: any) => void;
 }
 
 const HijamaReadingsDialog = ({ 
@@ -33,7 +34,8 @@ const HijamaReadingsDialog = ({
   patientPhone, 
   appointmentDate, 
   appointmentTime, 
-  treatmentConditions 
+  treatmentConditions,
+  onNavigateToPayment
 }: HijamaReadingsDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -126,8 +128,23 @@ const HijamaReadingsDialog = ({
       hijamaPoints
     });
     setIsOpen(false);
-    // Show payment dialog after saving readings
-    setShowPayment(true);
+    
+    // Navigate to payment and assign doctor section
+    if (onNavigateToPayment) {
+      onNavigateToPayment({
+        patientId,
+        patientName,
+        patientPhone,
+        appointmentDate,
+        appointmentTime,
+        treatmentConditions,
+        hijamaPointsCount: hijamaPoints.length,
+        calculatedPrice
+      });
+    } else {
+      // Fallback to payment dialog if no navigation function
+      setShowPayment(true);
+    }
   };
 
   return (

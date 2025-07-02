@@ -42,6 +42,7 @@ interface TreatmentCondition {
 
 interface TreatmentSectionProps {
   onBack?: () => void;
+  onNavigateToPayment?: (paymentData: any) => void;
 }
 
 const TREATMENT_CONDITIONS = [
@@ -71,7 +72,7 @@ const TREATMENT_CONDITIONS = [
   "السكري"
 ];
 
-const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
+const TreatmentSection = ({ onBack, onNavigateToPayment }: TreatmentSectionProps) => {
   const [patientsInTreatment, setPatientsInTreatment] = useState<Patient[]>([]);
   const [treatmentConditions, setTreatmentConditions] = useState<{[patientId: string]: TreatmentCondition[]}>({});
   const [loading, setLoading] = useState(true);
@@ -370,6 +371,7 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
                           appointmentDate={format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}
                           appointmentTime={patient.preferred_appointment_time}
                           treatmentConditions={treatmentConditions[patient.id]?.filter(c => c.is_checked).map(c => c.condition_name) || []}
+                          onNavigateToPayment={onNavigateToPayment}
                         />
                         
                         <Button

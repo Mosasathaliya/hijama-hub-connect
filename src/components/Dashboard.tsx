@@ -19,11 +19,13 @@ import AppointmentsSection from "@/components/AppointmentsSection";
 import AddDoctorSection from "@/components/AddDoctorSection";
 import HijamaCupPricingSection from "@/components/HijamaCupPricingSection";
 import TreatmentSection from "@/components/TreatmentSection";
+import PaymentAndAssignDoctorSection from "@/components/PaymentAndAssignDoctorSection";
 import { useState } from "react";
 
 const Dashboard = () => {
   const { logout } = useAuth();
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<any>(null);
 
   if (activeSection === "النماذج") {
     return <FormsManagement onBack={() => setActiveSection(null)} />;
@@ -42,7 +44,14 @@ const Dashboard = () => {
   }
 
   if (activeSection === "العلاج") {
-    return <TreatmentSection onBack={() => setActiveSection(null)} />;
+    return <TreatmentSection onBack={() => setActiveSection(null)} onNavigateToPayment={(data) => {
+      setPaymentData(data);
+      setActiveSection("دفع وتعيين طبيب");
+    }} />;
+  }
+
+  if (activeSection === "دفع وتعيين طبيب") {
+    return <PaymentAndAssignDoctorSection onBack={() => setActiveSection(null)} paymentData={paymentData} />;
   }
 
   const menuItems = [
