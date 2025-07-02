@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Stethoscope, 
   User,
   Phone,
   Calendar,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Save
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -28,12 +30,47 @@ interface Patient {
   additional_notes?: string;
 }
 
+interface TreatmentCondition {
+  id: string;
+  patient_form_id: string;
+  condition_name: string;
+  is_checked: boolean;
+}
+
 interface TreatmentSectionProps {
   onBack?: () => void;
 }
 
+const TREATMENT_CONDITIONS = [
+  "Seventh nerve",
+  "Weak immunity",
+  "Rheumatoid",
+  "blood allergy",
+  "High cholesterol and fats",
+  "foot salts",
+  "numbness of the extremities",
+  "women's sweat",
+  "sexual weakness",
+  "reproductive problems",
+  "Prostate / Hemorrhoids / Fistula",
+  "lower back pain",
+  "College",
+  "colon",
+  "stomach",
+  "aorta",
+  "tinnitus",
+  "headache",
+  "anemia",
+  "blood fluidity",
+  "the pressure",
+  "the heart",
+  "Hepatitis",
+  "Diabetes"
+];
+
 const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
   const [patientsInTreatment, setPatientsInTreatment] = useState<Patient[]>([]);
+  const [treatmentConditions, setTreatmentConditions] = useState<{[patientId: string]: TreatmentCondition[]}>({});
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -51,6 +88,11 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
 
       if (error) throw error;
       setPatientsInTreatment(data || []);
+      
+      // Fetch treatment conditions for all patients
+      if (data && data.length > 0) {
+        await fetchTreatmentConditions(data.map(p => p.id));
+      }
     } catch (error) {
       console.error("Error fetching patients in treatment:", error);
       toast({
@@ -61,6 +103,89 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTreatmentConditions = async (patientIds: string[]) => {
+    try {
+      const { data, error } = await supabase
+        .from("treatment_conditions")
+        .select("*")
+        .in("patient_form_id", patientIds);
+
+      if (error) throw error;
+
+      const conditionsByPatient: {[patientId: string]: TreatmentCondition[]} = {};
+      
+      // Group conditions by patient
+      patientIds.forEach(patientId => {
+        conditionsByPatient[patientId] = TREATMENT_CONDITIONS.map(conditionName => {
+          const existing = data?.find(c => 
+            c.patient_form_id === patientId && c.condition_name === conditionName
+          );
+          return existing || {
+            id: "",
+            patient_form_id: patientId,
+            condition_name: conditionName,
+            is_checked: false
+          };
+        });
+      });
+
+      setTreatmentConditions(conditionsByPatient);
+    } catch (error) {
+      console.error("Error fetching treatment conditions:", error);
+    }
+  };
+
+  const saveTreatmentConditions = async (patientId: string) => {
+    try {
+      const conditions = treatmentConditions[patientId] || [];
+      const checkedConditions = conditions.filter(c => c.is_checked);
+      
+      // Delete existing conditions for this patient
+      await supabase
+        .from("treatment_conditions")
+        .delete()
+        .eq("patient_form_id", patientId);
+
+      // Insert checked conditions
+      if (checkedConditions.length > 0) {
+        const { error } = await supabase
+          .from("treatment_conditions")
+          .insert(
+            checkedConditions.map(c => ({
+              patient_form_id: patientId,
+              condition_name: c.condition_name,
+              is_checked: true
+            }))
+          );
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "تم حفظ حالات العلاج",
+        description: "تم حفظ حالات العلاج بنجاح",
+      });
+    } catch (error) {
+      console.error("Error saving treatment conditions:", error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "حدث خطأ أثناء حفظ حالات العلاج",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleCondition = (patientId: string, conditionName: string) => {
+    setTreatmentConditions(prev => ({
+      ...prev,
+      [patientId]: prev[patientId]?.map(condition =>
+        condition.condition_name === conditionName
+          ? { ...condition, is_checked: !condition.is_checked }
+          : condition
+      ) || []
+    }));
   };
 
   const completePatientTreatment = async (patientId: string) => {
@@ -128,47 +253,92 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
             </div>
           ) : (
             <>
-              {/* Cards View for better display */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {/* Treatment Forms with Conditions */}
+              <div className="space-y-6">
                 {patientsInTreatment.map((patient) => (
-                  <Card key={patient.id} className="p-4 border-purple-200 bg-purple-50">
-                    <div className="space-y-3">
+                  <Card key={patient.id} className="border-purple-200">
+                    <CardHeader className="bg-purple-50">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-lg">{patient.patient_name}</h4>
+                        <div>
+                          <CardTitle className="text-lg">{patient.patient_name}</CardTitle>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                            <div className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {patient.patient_phone}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {patient.preferred_appointment_time}
+                            </div>
+                          </div>
+                        </div>
                         <Badge variant="secondary" className="bg-purple-100 text-purple-800">
                           تحت العلاج
                         </Badge>
                       </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3 h-3" />
-                          {patient.patient_phone}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3 h-3" />
-                          {format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3" />
-                          {patient.preferred_appointment_time}
+                      <div className="bg-white p-3 rounded-md mt-3">
+                        <strong>الشكوى الرئيسية:</strong> {patient.chief_complaint}
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <Stethoscope className="w-4 h-4" />
+                          حالات العلاج المطلوبة
+                        </h4>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {TREATMENT_CONDITIONS.map((condition, index) => {
+                            const isChecked = treatmentConditions[patient.id]?.find(
+                              c => c.condition_name === condition
+                            )?.is_checked || false;
+                            
+                            return (
+                              <div key={condition} className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id={`${patient.id}-${index}`}
+                                  checked={isChecked}
+                                  onCheckedChange={() => toggleCondition(patient.id, condition)}
+                                />
+                                <label
+                                  htmlFor={`${patient.id}-${index}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                >
+                                  {index + 1}. {condition}
+                                </label>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                       
-                      <div className="bg-white p-2 rounded text-sm">
-                        <strong>الشكوى:</strong> {patient.chief_complaint}
+                      <div className="flex gap-2 pt-4 border-t">
+                        <Button
+                          variant="healing"
+                          size="sm"
+                          onClick={() => saveTreatmentConditions(patient.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <Save className="w-3 h-3" />
+                          حفظ حالات العلاج
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => completePatientTreatment(patient.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          إكمال العلاج
+                        </Button>
                       </div>
-                      
-                      <Button
-                        variant="healing"
-                        size="sm"
-                        onClick={() => completePatientTreatment(patient.id)}
-                        className="w-full flex items-center gap-2"
-                      >
-                        <CheckCircle className="w-3 h-3" />
-                        إكمال العلاج
-                      </Button>
-                    </div>
+                    </CardContent>
                   </Card>
                 ))}
               </div>

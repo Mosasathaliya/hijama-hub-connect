@@ -132,6 +132,41 @@ export type Database = {
         }
         Relationships: []
       }
+      treatment_conditions: {
+        Row: {
+          condition_name: string
+          created_at: string
+          id: string
+          is_checked: boolean
+          patient_form_id: string
+          updated_at: string
+        }
+        Insert: {
+          condition_name: string
+          created_at?: string
+          id?: string
+          is_checked?: boolean
+          patient_form_id: string
+          updated_at?: string
+        }
+        Update: {
+          condition_name?: string
+          created_at?: string
+          id?: string
+          is_checked?: boolean
+          patient_form_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_conditions_patient_form_id_fkey"
+            columns: ["patient_form_id"]
+            isOneToOne: false
+            referencedRelation: "patient_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
