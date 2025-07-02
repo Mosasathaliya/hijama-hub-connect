@@ -10,7 +10,8 @@ import {
   User,
   CheckCircle,
   XCircle,
-  Eye
+  Eye,
+  Stethoscope
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +93,33 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
     }
   };
 
+  const sendToTreatment = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("patient_forms")
+        .update({ status: "in_treatment" })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      setAppointments(appointments.map(appointment => 
+        appointment.id === appointmentId ? { ...appointment, status: "in_treatment" } : appointment
+      ));
+
+      toast({
+        title: "تم إرسال المريض للعلاج",
+        description: "تم بدء جلسة العلاج بنجاح",
+      });
+    } catch (error) {
+      console.error("Error sending to treatment:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "حدث خطأ أثناء إرسال المريض للعلاج",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -102,6 +130,8 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
         return <Badge variant="outline" className="bg-blue-100 text-blue-800">مكتمل</Badge>;
       case "cancelled":
         return <Badge variant="destructive">ملغي</Badge>;
+      case "in_treatment":
+        return <Badge variant="secondary" className="bg-purple-100 text-purple-800">تحت العلاج</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -310,17 +340,30 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                     <TableCell>{format(new Date(appointment.preferred_appointment_date), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{appointment.preferred_appointment_time}</TableCell>
                     <TableCell>{getStatusBadge(appointment.status)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedAppointment(appointment)}
-                        className="flex items-center gap-1"
-                      >
-                        <Eye className="w-3 h-3" />
-                        عرض
-                      </Button>
-                    </TableCell>
+                     <TableCell>
+                       <div className="flex gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setSelectedAppointment(appointment)}
+                           className="flex items-center gap-1"
+                         >
+                           <Eye className="w-3 h-3" />
+                           عرض
+                         </Button>
+                         {appointment.status === "scheduled" && (
+                           <Button
+                             variant="healing"
+                             size="sm"
+                             onClick={() => sendToTreatment(appointment.id)}
+                             className="flex items-center gap-1"
+                           >
+                             <Stethoscope className="w-3 h-3" />
+                             زيارة
+                           </Button>
+                         )}
+                       </div>
+                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
