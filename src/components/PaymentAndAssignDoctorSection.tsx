@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { 
   CreditCard, 
   User,
@@ -14,7 +15,9 @@ import {
   UserCheck,
   DollarSign,
   Stethoscope,
-  CheckCircle2
+  CheckCircle2,
+  Edit,
+  Save
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -58,9 +61,11 @@ interface TodayPayment {
   patient_name: string;
   patient_phone: string;
   doctor_name: string;
+  doctor_id: string;
   amount: number;
   paid_at: string;
   hijama_points_count: number;
+  patient_form_id: string;
 }
 
 interface PaymentAndAssignDoctorSectionProps {
@@ -73,6 +78,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [todayPayments, setTodayPayments] = useState<TodayPayment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<TodayPayment | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDoctor, setEditDoctor] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -116,6 +125,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           hijama_points_count,
           paid_at,
           patient_form_id,
+          doctor_id,
           patient_forms!inner(
             patient_name,
             patient_phone
@@ -136,9 +146,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         patient_name: payment.patient_forms.patient_name,
         patient_phone: payment.patient_forms.patient_phone,
         doctor_name: payment.doctors.name,
+        doctor_id: payment.doctor_id,
         amount: payment.amount,
         paid_at: payment.paid_at,
-        hijama_points_count: payment.hijama_points_count
+        hijama_points_count: payment.hijama_points_count,
+        patient_form_id: payment.patient_form_id
       })) || [];
 
       setTodayPayments(formattedPayments);
@@ -189,6 +201,56 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       toast({
         title: "خطأ في جلب الأطباء",
         description: "حدث خطأ أثناء جلب قائمة الأطباء",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditPayment = (payment: TodayPayment) => {
+    setEditingPayment(payment);
+    setEditAmount(payment.amount.toString());
+    setEditDoctor(payment.doctor_id);
+    setShowEditDialog(true);
+  };
+
+  const saveEditedPayment = async () => {
+    if (!editingPayment) return;
+
+    try {
+      // Update payment amount
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .update({
+          amount: parseFloat(editAmount),
+          doctor_id: editDoctor
+        })
+        .eq("id", editingPayment.id);
+
+      if (paymentError) throw paymentError;
+
+      // Update patient form doctor assignment
+      const { error: patientError } = await supabase
+        .from("patient_forms")
+        .update({
+          doctor_id: editDoctor
+        })
+        .eq("id", editingPayment.patient_form_id);
+
+      if (patientError) throw patientError;
+
+      toast({
+        title: "تم تحديث البيانات",
+        description: "تم تحديث بيانات الدفع والطبيب بنجاح",
+      });
+
+      fetchTodayPayments();
+      setShowEditDialog(false);
+      setEditingPayment(null);
+    } catch (error) {
+      console.error("Error updating payment:", error);
+      toast({
+        title: "خطأ في التحديث",
+        description: "حدث خطأ أثناء تحديث البيانات",
         variant: "destructive",
       });
     }
@@ -302,6 +364,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   <TableHead>المبلغ المدفوع</TableHead>
                   <TableHead>عدد النقاط</TableHead>
                   <TableHead>وقت الدفع</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -321,6 +384,17 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                       </Badge>
                     </TableCell>
                     <TableCell>{format(new Date(payment.paid_at), "HH:mm")}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditPayment(payment)}
+                        className="flex items-center gap-1"
+                      >
+                        <Edit className="w-3 h-3" />
+                        تعديل
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -496,6 +570,84 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                 >
                   <CreditCard className="w-4 h-4" />
                   تأكيد الدفع وتعيين الطبيب
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2">
+              <Edit className="w-5 h-5" />
+              تعديل بيانات الدفع
+            </DialogTitle>
+            <DialogDescription className="text-right">
+              تعديل مبلغ الدفع والطبيب المخصص
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingPayment && (
+            <div className="space-y-6">
+              {/* Patient Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">{editingPayment.patient_name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">المبلغ المدفوع (ريال)</label>
+                    <Input
+                      type="number"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      placeholder="المبلغ"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">الطبيب المخصص</label>
+                    <Select value={editDoctor} onValueChange={setEditDoctor}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الطبيب" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {doctors.map((doctor) => (
+                          <SelectItem key={doctor.id} value={doctor.id}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{doctor.name}</span>
+                              {doctor.specialization && (
+                                <span className="text-sm text-muted-foreground">{doctor.specialization}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowEditDialog(false)}
+                  className="flex-1"
+                >
+                  إلغاء
+                </Button>
+                <Button 
+                  variant="healing" 
+                  onClick={saveEditedPayment}
+                  className="flex-1 flex items-center gap-2"
+                  disabled={!editAmount || !editDoctor}
+                >
+                  <Save className="w-4 h-4" />
+                  حفظ التعديلات
                 </Button>
               </div>
             </div>
