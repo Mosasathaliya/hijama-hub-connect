@@ -107,7 +107,7 @@ const Dashboard = () => {
       color: "bg-pink-500",
     },
     {
-      title: "payment and assign doctor",
+      title: "دفع وتعيين طبيب",
       description: "الدفع وتعيين طبيب للمرضى",
       icon: UserCog,
       color: "bg-blue-600",
