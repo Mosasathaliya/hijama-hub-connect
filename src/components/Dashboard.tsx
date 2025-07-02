@@ -14,9 +14,16 @@ import {
   UserCog
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import FormsManagement from "@/components/FormsManagement";
+import { useState } from "react";
 
 const Dashboard = () => {
   const { logout } = useAuth();
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
+  if (activeSection === "النماذج") {
+    return <FormsManagement />;
+  }
 
   const menuItems = [
     {
@@ -135,6 +142,7 @@ const Dashboard = () => {
                   variant="healing" 
                   className="w-full"
                   size="sm"
+                  onClick={() => setActiveSection(item.title)}
                 >
                   دخول
                 </Button>

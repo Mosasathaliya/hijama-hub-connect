@@ -9,7 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      patient_forms: {
+        Row: {
+          additional_notes: string | null
+          allergies: string | null
+          chief_complaint: string
+          created_at: string
+          current_medications: string | null
+          date_of_birth: string | null
+          form_token: string
+          id: string
+          medical_history: string | null
+          patient_email: string | null
+          patient_name: string
+          patient_phone: string
+          preferred_appointment_date: string | null
+          preferred_appointment_time: string | null
+          status: string | null
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          allergies?: string | null
+          chief_complaint: string
+          created_at?: string
+          current_medications?: string | null
+          date_of_birth?: string | null
+          form_token?: string
+          id?: string
+          medical_history?: string | null
+          patient_email?: string | null
+          patient_name: string
+          patient_phone: string
+          preferred_appointment_date?: string | null
+          preferred_appointment_time?: string | null
+          status?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          allergies?: string | null
+          chief_complaint?: string
+          created_at?: string
+          current_medications?: string | null
+          date_of_birth?: string | null
+          form_token?: string
+          id?: string
+          medical_history?: string | null
+          patient_email?: string | null
+          patient_name?: string
+          patient_phone?: string
+          preferred_appointment_date?: string | null
+          preferred_appointment_time?: string | null
+          status?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

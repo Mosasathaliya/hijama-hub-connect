@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import PatientFormPage from "./pages/PatientFormPage";
 import LoginPage from "@/components/LoginPage";
 
 const queryClient = new QueryClient();
@@ -13,14 +14,11 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const { isLoggedIn, login } = useAuth();
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={login} />;
-  }
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/patient-form/:token" element={<PatientFormPage />} />
+        <Route path="/" element={isLoggedIn ? <Index /> : <LoginPage onLogin={login} />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
