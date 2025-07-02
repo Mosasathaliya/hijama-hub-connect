@@ -8,7 +8,7 @@ const HeroSection = () => {
         <div className="space-y-8">
           <div className="space-y-4">
             <h1 className="text-5xl lg:text-6xl font-bold text-primary leading-tight">
-              مركز خير التداوي
+              مركز الخير تداوي
               <span className="block text-primary-glow">للحجامة</span>
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
