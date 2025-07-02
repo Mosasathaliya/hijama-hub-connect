@@ -118,10 +118,10 @@ const ManagementSection = ({ onBack }: ManagementSectionProps) => {
       // .eq('payment_status', 'paid')
 
       if (fromDate) {
-        query = query.gte('paid_at', format(fromDate, 'yyyy-MM-dd'));
+        query = query.gte('paid_at', format(fromDate, 'yyyy-MM-dd') + 'T00:00:00.000Z');
       }
       if (toDate) {
-        query = query.lte('paid_at', format(toDate, 'yyyy-MM-dd'));
+        query = query.lte('paid_at', format(toDate, 'yyyy-MM-dd') + 'T23:59:59.999Z');
       }
 
       const { data, error } = await query;
