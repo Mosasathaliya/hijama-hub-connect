@@ -107,16 +107,10 @@ const Dashboard = () => {
       color: "bg-pink-500",
     },
     {
-      title: "تعيين طبيب",
-      description: "تعيين طبيب للمرضى",
+      title: "payment and assign doctor",
+      description: "الدفع وتعيين طبيب للمرضى",
       icon: UserCog,
       color: "bg-blue-600",
-    },
-    {
-      title: "تحصيل الدفعات",
-      description: "إدارة وتحصيل المدفوعات",
-      icon: CreditCard,
-      color: "bg-green-600",
     },
   ];
 
