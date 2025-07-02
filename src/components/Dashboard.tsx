@@ -22,6 +22,7 @@ import HijamaCupPricingSection from "@/components/HijamaCupPricingSection";
 import TreatmentSection from "@/components/TreatmentSection";
 import HijamaPointsViewSection from "@/components/HijamaPointsViewSection";
 import PaymentAndAssignDoctorSection from "@/components/PaymentAndAssignDoctorSection";
+import PaymentsSection from "@/components/PaymentsSection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -58,6 +59,10 @@ const Dashboard = () => {
 
   if (activeSection === "نقاط الحجامة المحددة") {
     return <HijamaPointsViewSection onBack={() => setActiveSection(null)} />;
+  }
+
+  if (activeSection === "المدفوعات") {
+    return <PaymentsSection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
