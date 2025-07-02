@@ -24,7 +24,11 @@ const patientFormSchema = z.object({
 
 type PatientFormData = z.infer<typeof patientFormSchema>;
 
-const FormsManagement = () => {
+interface FormsManagementProps {
+  onBack?: () => void;
+}
+
+const FormsManagement = ({ onBack }: FormsManagementProps) => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -213,9 +217,16 @@ const FormsManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-primary">النماذج</h2>
-          <p className="text-muted-foreground">إضافة مواعيد المرضى وإنشاء روابط للمرضى</p>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button onClick={onBack} variant="outline">
+              العودة للوحة التحكم
+            </Button>
+          )}
+          <div>
+            <h2 className="text-2xl font-bold text-primary">النماذج</h2>
+            <p className="text-muted-foreground">إضافة مواعيد المرضى وإنشاء روابط للمرضى</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button onClick={copyPatientLink} variant="outline" className="flex items-center gap-2">

@@ -23,7 +23,7 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   if (activeSection === "النماذج") {
-    return <FormsManagement />;
+    return <FormsManagement onBack={() => setActiveSection(null)} />;
   }
 
   if (activeSection === "المواعيد") {
