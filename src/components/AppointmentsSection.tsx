@@ -29,7 +29,11 @@ interface Appointment {
   additional_notes?: string;
 }
 
-const AppointmentsSection = () => {
+interface AppointmentsSectionProps {
+  onBack?: () => void;
+}
+
+const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -213,9 +217,16 @@ const AppointmentsSection = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-primary">المواعيد</h2>
-          <p className="text-muted-foreground">إدارة مواعيد المرضى</p>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button onClick={onBack} variant="outline">
+              العودة للوحة التحكم
+            </Button>
+          )}
+          <div>
+            <h2 className="text-2xl font-bold text-primary">المواعيد</h2>
+            <p className="text-muted-foreground">إدارة مواعيد المرضى</p>
+          </div>
         </div>
         <Button onClick={fetchAppointments} variant="outline">
           تحديث

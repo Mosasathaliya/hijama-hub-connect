@@ -27,7 +27,7 @@ const Dashboard = () => {
   }
 
   if (activeSection === "المواعيد") {
-    return <AppointmentsSection />;
+    return <AppointmentsSection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
