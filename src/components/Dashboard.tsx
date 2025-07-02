@@ -65,6 +65,12 @@ const Dashboard = () => {
       color: "bg-purple-500",
     },
     {
+      title: "دفع وتعيين طبيب",
+      description: "الدفع وتعيين طبيب للمرضى",
+      icon: UserCog,
+      color: "bg-blue-600",
+    },
+    {
       title: "المدفوعات",
       description: "إدارة المدفوعات والفواتير",
       icon: CreditCard,
@@ -105,12 +111,6 @@ const Dashboard = () => {
       description: "إدارة أسعار كؤوس الحجامة",
       icon: DollarSign,
       color: "bg-pink-500",
-    },
-    {
-      title: "دفع وتعيين طبيب",
-      description: "الدفع وتعيين طبيب للمرضى",
-      icon: UserCog,
-      color: "bg-blue-600",
     },
   ];
 
