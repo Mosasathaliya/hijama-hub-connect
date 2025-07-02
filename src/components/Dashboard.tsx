@@ -24,12 +24,17 @@ import HijamaPointsViewSection from "@/components/HijamaPointsViewSection";
 import PaymentAndAssignDoctorSection from "@/components/PaymentAndAssignDoctorSection";
 import PaymentsSection from "@/components/PaymentsSection";
 import PatientHistorySection from "@/components/PatientHistorySection";
+import ManagementSection from "@/components/ManagementSection";
 import { useState } from "react";
 
 const Dashboard = () => {
   const { logout } = useAuth();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
+
+  if (activeSection === "الإدارة") {
+    return <ManagementSection onBack={() => setActiveSection(null)} />;
+  }
 
   if (activeSection === "النماذج") {
     return <FormsManagement onBack={() => setActiveSection(null)} />;
