@@ -80,8 +80,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<TodayPayment | null>(null);
-  const [editAmount, setEditAmount] = useState("");
+  const [editCupsCount, setEditCupsCount] = useState("");
   const [editDoctor, setEditDoctor] = useState("");
+  const [cupPrices, setCupPrices] = useState<any[]>([]);
+  const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,56 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     fetchPendingPayments();
     fetchTodayPayments();
     fetchDoctors();
+    fetchCupPrices();
   }, []);
+
+  // Calculate price when cups count changes
+  useEffect(() => {
+    if (editCupsCount && cupPrices.length > 0) {
+      calculatePrice();
+    }
+  }, [editCupsCount, cupPrices]);
+
+  const fetchCupPrices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("hijama_cup_prices")
+        .select("*")
+        .eq("is_active", true)
+        .order("number_of_cups", { ascending: true });
+
+      if (error) throw error;
+      setCupPrices(data || []);
+    } catch (error) {
+      console.error("Error fetching cup prices:", error);
+    }
+  };
+
+  const calculatePrice = () => {
+    const cupsCount = parseInt(editCupsCount);
+    
+    if (!cupsCount || cupPrices.length === 0) {
+      setCalculatedPrice(0);
+      return;
+    }
+
+    // Find the appropriate price tier
+    let selectedPrice = cupPrices.find(price => price.number_of_cups === cupsCount);
+    
+    // If exact match not found, find the closest higher tier
+    if (!selectedPrice) {
+      selectedPrice = cupPrices
+        .filter(price => price.number_of_cups >= cupsCount)
+        .sort((a, b) => a.number_of_cups - b.number_of_cups)[0];
+    }
+    
+    // If still no match, use the highest tier
+    if (!selectedPrice && cupPrices.length > 0) {
+      selectedPrice = cupPrices[cupPrices.length - 1];
+    }
+
+    setCalculatedPrice(selectedPrice ? Number(selectedPrice.price) : 0);
+  };
 
   // If payment data is passed from treatment section, add it to the list
   useEffect(() => {
@@ -208,8 +259,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const handleEditPayment = (payment: TodayPayment) => {
     setEditingPayment(payment);
-    setEditAmount(payment.amount.toString());
+    setEditCupsCount(payment.hijama_points_count.toString());
     setEditDoctor(payment.doctor_id);
+    setCalculatedPrice(payment.amount);
     setShowEditDialog(true);
   };
 
@@ -217,11 +269,12 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     if (!editingPayment) return;
 
     try {
-      // Update payment amount
+      // Update payment amount and hijama points count
       const { error: paymentError } = await supabase
         .from("payments")
         .update({
-          amount: parseFloat(editAmount),
+          amount: calculatedPrice,
+          hijama_points_count: parseInt(editCupsCount),
           doctor_id: editDoctor
         })
         .eq("id", editingPayment.id);
@@ -240,7 +293,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       toast({
         title: "تم تحديث البيانات",
-        description: "تم تحديث بيانات الدفع والطبيب بنجاح",
+        description: `تم تحديث عدد الكؤوس إلى ${editCupsCount} والمبلغ إلى ${calculatedPrice} ريال`,
       });
 
       fetchTodayPayments();
@@ -599,13 +652,23 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">المبلغ المدفوع (ريال)</label>
+                    <label className="text-sm font-medium">عدد كؤوس الحجامة</label>
                     <Input
                       type="number"
-                      value={editAmount}
-                      onChange={(e) => setEditAmount(e.target.value)}
-                      placeholder="المبلغ"
+                      value={editCupsCount}
+                      onChange={(e) => setEditCupsCount(e.target.value)}
+                      placeholder="عدد الكؤوس"
+                      min="1"
                     />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">المبلغ المحسوب</label>
+                    <div className="p-2 bg-muted rounded-md">
+                      <span className="text-lg font-bold text-primary">
+                        {calculatedPrice} ريال
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -644,7 +707,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   variant="healing" 
                   onClick={saveEditedPayment}
                   className="flex-1 flex items-center gap-2"
-                  disabled={!editAmount || !editDoctor}
+                  disabled={!editCupsCount || !editDoctor || calculatedPrice === 0}
                 >
                   <Save className="w-4 h-4" />
                   حفظ التعديلات
