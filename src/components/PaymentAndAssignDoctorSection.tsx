@@ -147,22 +147,32 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     }
 
     try {
-      // Update patient status to paid and assign doctor
+      // Update patient status and assign doctor
       const { error: updateError } = await supabase
         .from("patient_forms")
         .update({ 
           status: "paid_and_assigned",
-          // We would need to add a doctor_id field to patient_forms table
-          // For now, we'll store it in additional_notes
-          additional_notes: `طبيب مخصص: ${doctors.find(d => d.id === selectedDoctor)?.name || 'غير محدد'}`
+          doctor_id: selectedDoctor
         })
         .eq("id", selectedPatient.id);
 
       if (updateError) throw updateError;
 
-      // Here you would integrate with actual payment gateway
-      // For now, we'll simulate payment processing
-      
+      // Create payment record
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          patient_form_id: selectedPatient.id,
+          doctor_id: selectedDoctor,
+          amount: paymentData?.calculatedPrice || 0,
+          hijama_points_count: paymentData?.hijamaPointsCount || 0,
+          payment_status: "completed",
+          payment_method: "cash", // Default to cash, could be made selectable
+          paid_at: new Date().toISOString()
+        });
+
+      if (paymentError) throw paymentError;
+
       toast({
         title: "تم الدفع وتعيين الطبيب",
         description: `تم الدفع بنجاح وتعيين الطبيب ${doctors.find(d => d.id === selectedDoctor)?.name}`,

@@ -119,31 +119,59 @@ const HijamaReadingsDialog = ({
     setHijamaPoints(prev => prev.filter(p => p.id !== pointId));
   };
 
-  const saveReadings = () => {
-    // Here you would save to database
-    console.log("Saving readings:", {
-      patientId,
-      bloodPressure,
-      weight,
-      hijamaPoints
-    });
-    setIsOpen(false);
-    
-    // Navigate to payment and assign doctor section
-    if (onNavigateToPayment) {
-      onNavigateToPayment({
-        patientId,
-        patientName,
-        patientPhone,
-        appointmentDate,
-        appointmentTime,
-        treatmentConditions,
-        hijamaPointsCount: hijamaPoints.length,
-        calculatedPrice
+  const saveReadings = async () => {
+    try {
+      // Save hijama readings to database
+      const { error: readingsError } = await supabase
+        .from("hijama_readings")
+        .insert({
+          patient_form_id: patientId,
+          blood_pressure_systolic: bloodPressure.systolic ? parseInt(bloodPressure.systolic) : null,
+          blood_pressure_diastolic: bloodPressure.diastolic ? parseInt(bloodPressure.diastolic) : null,
+          weight: weight ? parseFloat(weight) : null,
+          hijama_points: JSON.parse(JSON.stringify(hijamaPoints))
+        });
+
+      if (readingsError) throw readingsError;
+
+      // Update patient status to payment_pending
+      const { error: statusError } = await supabase
+        .from("patient_forms")
+        .update({ status: "payment_pending" })
+        .eq("id", patientId);
+
+      if (statusError) throw statusError;
+
+      toast({
+        title: "تم حفظ القراءات",
+        description: "تم حفظ قراءات الحجامة بنجاح",
       });
-    } else {
-      // Fallback to payment dialog if no navigation function
-      setShowPayment(true);
+
+      setIsOpen(false);
+      
+      // Navigate to payment and assign doctor section
+      if (onNavigateToPayment) {
+        onNavigateToPayment({
+          patientId,
+          patientName,
+          patientPhone,
+          appointmentDate,
+          appointmentTime,
+          treatmentConditions,
+          hijamaPointsCount: hijamaPoints.length,
+          calculatedPrice
+        });
+      } else {
+        // Fallback to payment dialog if no navigation function
+        setShowPayment(true);
+      }
+    } catch (error) {
+      console.error("Error saving readings:", error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "حدث خطأ أثناء حفظ القراءات",
+        variant: "destructive",
+      });
     }
   };
 
@@ -309,7 +337,7 @@ const HijamaReadingsDialog = ({
             إلغاء
           </Button>
           <Button variant="healing" onClick={saveReadings}>
-            حفظ القراءات
+            حفظ القراءات والانتقال للدفع
           </Button>
         </div>
       </DialogContent>

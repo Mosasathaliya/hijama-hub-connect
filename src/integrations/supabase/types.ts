@@ -72,6 +72,47 @@ export type Database = {
         }
         Relationships: []
       }
+      hijama_readings: {
+        Row: {
+          blood_pressure_diastolic: number | null
+          blood_pressure_systolic: number | null
+          created_at: string
+          hijama_points: Json | null
+          id: string
+          patient_form_id: string
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          created_at?: string
+          hijama_points?: Json | null
+          id?: string
+          patient_form_id: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          created_at?: string
+          hijama_points?: Json | null
+          id?: string
+          patient_form_id?: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hijama_readings_patient_form_id_fkey"
+            columns: ["patient_form_id"]
+            isOneToOne: false
+            referencedRelation: "patient_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_forms: {
         Row: {
           additional_notes: string | null
@@ -80,6 +121,7 @@ export type Database = {
           created_at: string
           current_medications: string | null
           date_of_birth: string | null
+          doctor_id: string | null
           form_token: string
           id: string
           medical_history: string | null
@@ -99,6 +141,7 @@ export type Database = {
           created_at?: string
           current_medications?: string | null
           date_of_birth?: string | null
+          doctor_id?: string | null
           form_token?: string
           id?: string
           medical_history?: string | null
@@ -118,6 +161,7 @@ export type Database = {
           created_at?: string
           current_medications?: string | null
           date_of_birth?: string | null
+          doctor_id?: string | null
           form_token?: string
           id?: string
           medical_history?: string | null
@@ -130,7 +174,69 @@ export type Database = {
           submitted_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patient_forms_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          doctor_id: string | null
+          hijama_points_count: number
+          id: string
+          paid_at: string | null
+          patient_form_id: string
+          payment_method: string | null
+          payment_status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          doctor_id?: string | null
+          hijama_points_count?: number
+          id?: string
+          paid_at?: string | null
+          patient_form_id: string
+          payment_method?: string | null
+          payment_status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          doctor_id?: string | null
+          hijama_points_count?: number
+          id?: string
+          paid_at?: string | null
+          patient_form_id?: string
+          payment_method?: string | null
+          payment_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_patient_form_id_fkey"
+            columns: ["patient_form_id"]
+            isOneToOne: false
+            referencedRelation: "patient_forms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       treatment_conditions: {
         Row: {
