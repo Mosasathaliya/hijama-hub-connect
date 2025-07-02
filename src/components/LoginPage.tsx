@@ -23,7 +23,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
         onLogin();
         toast({
           title: "تم تسجيل الدخول بنجاح",
-          description: "مرحباً بك في مركز التداوي للحجامة",
+          description: "مرحباً بك في مركز خير التداوي للحجامة",
         });
       } else {
         toast({
@@ -41,7 +41,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">
-            مركز التداوي للحجامة
+            مركز خير التداوي للحجامة
           </CardTitle>
           <CardDescription>
             أدخل كود الدخول للوصول إلى النظام

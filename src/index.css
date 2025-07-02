@@ -8,13 +8,13 @@ All colors MUST be HSL.
 
 @layer base {
 :root {
-    --background: 248 250 252;
+    --background: 41 88% 96%;
     --foreground: 15 23 42;
 
-    --card: 255 255 255;
+    --card: 41 100% 98%;
     --card-foreground: 15 23 42;
 
-    --popover: 255 255 255;
+    --popover: 41 100% 98%;
     --popover-foreground: 15 23 42;
 
     --primary: 134 65% 28%;
@@ -24,16 +24,17 @@ All colors MUST be HSL.
     --secondary: 100 80% 85%;
     --secondary-foreground: 134 65% 20%;
 
-    --muted: 100 20% 96%;
+    --muted: 41 50% 92%;
     --muted-foreground: 100 10% 45%;
 
     --accent: 25 95% 53%;
     --accent-foreground: 255 255 255;
 
-    /* Medical themed gradients */
+    /* Cream-themed gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-healing: linear-gradient(180deg, hsl(100 80% 98%), hsl(100 30% 95%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(100 20% 98%));
+    --gradient-healing: linear-gradient(180deg, hsl(41 88% 96%), hsl(41 70% 92%));
+    --gradient-card: linear-gradient(145deg, hsl(41 100% 98%), hsl(41 80% 95%));
+    --gradient-subtle: linear-gradient(180deg, hsl(41 88% 96%), hsl(41 60% 90%));
 
     /* Shadows */
     --shadow-soft: 0 4px 20px -2px hsl(var(--primary) / 0.1);
