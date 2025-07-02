@@ -77,12 +77,34 @@ const ManagementSection = ({ onBack }: ManagementSectionProps) => {
 
     setLoading(true);
     try {
+      // First, let's check all payments for debugging
+      const { data: allPayments, error: debugError } = await supabase
+        .from('payments')
+        .select(`
+          id,
+          amount,
+          paid_at,
+          doctor_id,
+          payment_status,
+          patient_form_id,
+          patient_forms (
+            patient_name,
+            patient_phone
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      console.log('All payments:', allPayments);
+      console.log('Selected doctor ID:', selectedDoctor);
+
       let query = supabase
         .from('payments')
         .select(`
           id,
           amount,
           paid_at,
+          doctor_id,
+          payment_status,
           patient_form_id,
           patient_forms (
             patient_name,
@@ -90,8 +112,10 @@ const ManagementSection = ({ onBack }: ManagementSectionProps) => {
           )
         `)
         .eq('doctor_id', selectedDoctor)
-        .eq('payment_status', 'paid')
         .order('paid_at', { ascending: false });
+
+      // Remove payment_status filter for now to see all payments for the doctor
+      // .eq('payment_status', 'paid')
 
       if (fromDate) {
         query = query.gte('paid_at', format(fromDate, 'yyyy-MM-dd'));
@@ -104,6 +128,7 @@ const ManagementSection = ({ onBack }: ManagementSectionProps) => {
 
       if (error) throw error;
 
+      console.log('Filtered payments for doctor:', data);
       setPayments(data || []);
       
       // Calculate totals
