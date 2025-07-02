@@ -1,15 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { CreditCard, Receipt, User, Phone, Calendar, Clock, Stethoscope } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { CreditCard, Receipt, User, Phone, Calendar, Clock } from "lucide-react";
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -35,44 +31,8 @@ const PaymentDialog = ({
   calculatedPrice
 }: PaymentDialogProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchDoctors();
-  }, []);
-
-  const fetchDoctors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      setDoctors(data || []);
-    } catch (error) {
-      console.error("Error fetching doctors:", error);
-      toast({
-        title: "خطأ في جلب الأطباء",
-        description: "حدث خطأ أثناء جلب قائمة الأطباء",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handlePayment = async () => {
-    if (!selectedDoctorId) {
-      toast({
-        title: "يرجى اختيار طبيب",
-        description: "يجب اختيار طبيب قبل إتمام عملية الدفع",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsProcessing(true);
     
     // Simulate payment processing
@@ -84,13 +44,7 @@ const PaymentDialog = ({
         patient: patientName,
         amount: calculatedPrice,
         points: hijamaPointsCount,
-        conditions: treatmentConditions,
-        doctorId: selectedDoctorId
-      });
-      
-      toast({
-        title: "تم الدفع بنجاح",
-        description: "تم إتمام عملية الدفع وتحديد الطبيب المختص",
+        conditions: treatmentConditions
       });
     }, 2000);
   };
@@ -160,40 +114,6 @@ const PaymentDialog = ({
                 <Badge variant="outline" className="text-lg px-3 py-1">
                   {hijamaPointsCount} نقطة
                 </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Doctor Assignment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Stethoscope className="w-4 h-4" />
-                تحديد الطبيب المعالج
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label>اختر الطبيب:</Label>
-                <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر طبيب من القائمة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {doctors.map((doctor) => (
-                      <SelectItem key={doctor.id} value={doctor.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{doctor.name}</span>
-                          {doctor.specialization && (
-                            <Badge variant="outline" className="text-xs">
-                              {doctor.specialization}
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>
