@@ -1,9 +1,24 @@
 import { Button } from "@/components/ui/button";
-import { Heart, Calendar, Phone } from "lucide-react";
+import { Heart, Calendar, Phone, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const HeroSection = () => {
+  const { logout } = useAuth();
+
   return (
     <section className="relative min-h-screen bg-gradient-healing flex items-center justify-center px-4">
+      {/* Logout Button */}
+      <div className="absolute top-4 right-4 z-10">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={logout}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          تسجيل خروج
+        </Button>
+      </div>
       <div className="container max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-8">
           <div className="space-y-6 text-center">
