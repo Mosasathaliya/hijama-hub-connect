@@ -351,7 +351,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                            <Eye className="w-3 h-3" />
                            عرض
                          </Button>
-                         {appointment.status === "scheduled" && (
+                         {(appointment.status === "scheduled" || appointment.status === "pending") && (
                            <Button
                              variant="healing"
                              size="sm"
