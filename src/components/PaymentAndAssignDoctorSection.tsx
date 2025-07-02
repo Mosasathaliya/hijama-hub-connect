@@ -13,7 +13,8 @@ import {
   Clock,
   UserCheck,
   DollarSign,
-  Stethoscope
+  Stethoscope,
+  CheckCircle2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +53,16 @@ interface PaymentData {
   calculatedPrice: number;
 }
 
+interface TodayPayment {
+  id: string;
+  patient_name: string;
+  patient_phone: string;
+  doctor_name: string;
+  amount: number;
+  paid_at: string;
+  hijama_points_count: number;
+}
+
 interface PaymentAndAssignDoctorSectionProps {
   onBack?: () => void;
   paymentData?: PaymentData;
@@ -59,6 +70,7 @@ interface PaymentAndAssignDoctorSectionProps {
 
 const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssignDoctorSectionProps) => {
   const [pendingPayments, setPendingPayments] = useState<Patient[]>([]);
+  const [todayPayments, setTodayPayments] = useState<TodayPayment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -68,6 +80,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   useEffect(() => {
     fetchPendingPayments();
+    fetchTodayPayments();
     fetchDoctors();
   }, []);
 
@@ -88,6 +101,56 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       setShowAssignDialog(true);
     }
   }, [paymentData]);
+
+  const fetchTodayPayments = async () => {
+    try {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+      const { data, error } = await supabase
+        .from("payments")
+        .select(`
+          id,
+          amount,
+          hijama_points_count,
+          paid_at,
+          patient_form_id,
+          patient_forms!inner(
+            patient_name,
+            patient_phone
+          ),
+          doctors!inner(
+            name
+          )
+        `)
+        .eq("payment_status", "completed")
+        .gte("paid_at", startOfDay.toISOString())
+        .lt("paid_at", endOfDay.toISOString())
+        .order("paid_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formattedPayments = data?.map(payment => ({
+        id: payment.id,
+        patient_name: payment.patient_forms.patient_name,
+        patient_phone: payment.patient_forms.patient_phone,
+        doctor_name: payment.doctors.name,
+        amount: payment.amount,
+        paid_at: payment.paid_at,
+        hijama_points_count: payment.hijama_points_count
+      })) || [];
+
+      setTodayPayments(formattedPayments);
+    } catch (error) {
+      console.error("Error fetching today's payments:", error);
+      toast({
+        title: "خطأ في جلب البيانات",
+        description: "حدث خطأ أثناء جلب بيانات المدفوعات اليوم",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchPendingPayments = async () => {
     try {
@@ -178,8 +241,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         description: `تم الدفع بنجاح وتعيين الطبيب ${doctors.find(d => d.id === selectedDoctor)?.name}`,
       });
 
-      // Refresh the list
+      // Refresh the lists
       fetchPendingPayments();
+      fetchTodayPayments();
       setShowAssignDialog(false);
       setSelectedPatient(null);
       setSelectedDoctor("");
@@ -208,10 +272,62 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
             <p className="text-muted-foreground">إدارة المدفوعات وتعيين الأطباء للمرضى</p>
           </div>
         </div>
-        <Button onClick={fetchPendingPayments} variant="outline">
+        <Button onClick={() => { fetchPendingPayments(); fetchTodayPayments(); }} variant="outline">
           تحديث
         </Button>
       </div>
+
+      {/* Today's Payments */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
+            المدفوعات اليوم ({todayPayments.length})
+          </CardTitle>
+          <CardDescription>المرضى الذين تم دفعهم وتعيين طبيب لهم اليوم</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {todayPayments.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">لا يوجد مدفوعات اليوم</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>اسم المريض</TableHead>
+                  <TableHead>رقم الهاتف</TableHead>
+                  <TableHead>الطبيب المخصص</TableHead>
+                  <TableHead>المبلغ المدفوع</TableHead>
+                  <TableHead>عدد النقاط</TableHead>
+                  <TableHead>وقت الدفع</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {todayPayments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="font-medium">{payment.patient_name}</TableCell>
+                    <TableCell>{payment.patient_phone}</TableCell>
+                    <TableCell>{payment.doctor_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        {payment.amount} ريال
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {payment.hijama_points_count} نقطة
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{format(new Date(payment.paid_at), "HH:mm")}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Pending Payments */}
       <Card>
