@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import FormsManagement from "@/components/FormsManagement";
 import AppointmentsSection from "@/components/AppointmentsSection";
+import AddDoctorSection from "@/components/AddDoctorSection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -27,6 +28,10 @@ const Dashboard = () => {
 
   if (activeSection === "المواعيد") {
     return <AppointmentsSection onBack={() => setActiveSection(null)} />;
+  }
+
+  if (activeSection === "إضافة طبيب جديد") {
+    return <AddDoctorSection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
