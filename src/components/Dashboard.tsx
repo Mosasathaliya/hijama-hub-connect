@@ -23,6 +23,7 @@ import TreatmentSection from "@/components/TreatmentSection";
 import HijamaPointsViewSection from "@/components/HijamaPointsViewSection";
 import PaymentAndAssignDoctorSection from "@/components/PaymentAndAssignDoctorSection";
 import PaymentsSection from "@/components/PaymentsSection";
+import PatientHistorySection from "@/components/PatientHistorySection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -63,6 +64,10 @@ const Dashboard = () => {
 
   if (activeSection === "المدفوعات") {
     return <PaymentsSection onBack={() => setActiveSection(null)} />;
+  }
+
+  if (activeSection === "تاريخ المرضى") {
+    return <PatientHistorySection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
