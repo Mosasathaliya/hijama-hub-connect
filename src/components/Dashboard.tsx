@@ -10,7 +10,8 @@ import {
   UserPlus, 
   Receipt, 
   FileText,
-  UserCog
+  UserCog,
+  DollarSign
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import FormsManagement from "@/components/FormsManagement";
@@ -88,6 +89,12 @@ const Dashboard = () => {
       description: "النماذج والاستمارات",
       icon: FileText,
       color: "bg-yellow-500",
+    },
+    {
+      title: "أسعار كؤوس الحجامة",
+      description: "إدارة أسعار كؤوس الحجامة",
+      icon: DollarSign,
+      color: "bg-pink-500",
     },
   ];
 
