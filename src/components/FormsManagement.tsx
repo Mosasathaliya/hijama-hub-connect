@@ -1,64 +1,74 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Copy, 
-  Plus, 
-  Eye, 
-  Calendar,
-  Clock,
-  Phone,
-  Mail,
-  FileText
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Plus } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 
-interface PatientFormData {
-  id: string;
-  form_token: string;
-  patient_name: string;
-  patient_phone: string;
-  patient_email: string | null;
-  date_of_birth: string;
-  medical_history: string | null;
-  current_medications: string | null;
-  allergies: string | null;
-  chief_complaint: string;
-  preferred_appointment_date: string | null;
-  preferred_appointment_time: string | null;
-  additional_notes: string | null;
-  status: string;
-  submitted_at: string;
-}
+const patientFormSchema = z.object({
+  patient_name: z.string().min(2, "الاسم مطلوب"),
+  age: z.number().min(1, "العمر مطلوب").max(120, "عمر غير صحيح"),
+  id_number: z.string().min(10, "رقم الهوية مطلوب"),
+  appointment_date: z.date({ required_error: "تاريخ الموعد مطلوب" }),
+  appointment_time: z.string().min(1, "وقت الموعد مطلوب"),
+});
+
+type PatientFormData = z.infer<typeof patientFormSchema>;
 
 const FormsManagement = () => {
-  const [forms, setForms] = useState<PatientFormData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedForm, setSelectedForm] = useState<PatientFormData | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchForms();
-  }, []);
+  const form = useForm<PatientFormData>({
+    resolver: zodResolver(patientFormSchema),
+  });
 
-  const fetchForms = async () => {
+  const onSubmit = async (data: PatientFormData) => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      const formData = {
+        patient_name: data.patient_name,
+        patient_phone: data.id_number, // Using id_number field for phone
+        patient_email: null,
+        date_of_birth: new Date(new Date().getFullYear() - data.age, 0, 1).toISOString().split('T')[0],
+        medical_history: null,
+        current_medications: null,
+        allergies: null,
+        chief_complaint: `موعد جديد - العمر: ${data.age}, رقم الهوية: ${data.id_number}`,
+        preferred_appointment_date: data.appointment_date.toISOString().split('T')[0],
+        preferred_appointment_time: data.appointment_time,
+        additional_notes: null,
+        status: 'scheduled'
+      };
+
+      const { error } = await supabase
         .from("patient_forms")
-        .select("*")
-        .order("submitted_at", { ascending: false });
+        .insert([formData]);
 
       if (error) throw error;
-      setForms(data || []);
-    } catch (error) {
-      console.error("Error fetching forms:", error);
+
       toast({
-        title: "خطأ في جلب البيانات",
-        description: "حدث خطأ أثناء جلب النماذج",
+        title: "تم الحفظ بنجاح",
+        description: "تم إضافة موعد المريض بنجاح",
+      });
+      
+      form.reset();
+      setShowForm(false);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "حدث خطأ أثناء حفظ البيانات",
         variant: "destructive",
       });
     } finally {
@@ -66,202 +76,115 @@ const FormsManagement = () => {
     }
   };
 
-  const generateShareableLink = async () => {
-    try {
-      // Create a new form token
-      const { data, error } = await supabase
-        .from("patient_forms")
-        .insert([{
-          patient_name: "temp",
-          patient_phone: "temp",
-          chief_complaint: "temp",
-          status: "draft"
-        }])
-        .select("form_token")
-        .single();
-
-      if (error) throw error;
-
-      // Delete the temporary record but keep the token
-      await supabase
-        .from("patient_forms")
-        .delete()
-        .eq("form_token", data.form_token);
-
-      const link = `${window.location.origin}/patient-form/${data.form_token}`;
-      
-      navigator.clipboard.writeText(link);
-      toast({
-        title: "تم إنشاء الرابط",
-        description: "تم نسخ الرابط إلى الحافظة",
-      });
-    } catch (error) {
-      console.error("Error generating link:", error);
-      toast({
-        title: "خطأ في إنشاء الرابط",
-        description: "حدث خطأ أثناء إنشاء الرابط",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateFormStatus = async (formId: string, status: string) => {
-    try {
-      const { error } = await supabase
-        .from("patient_forms")
-        .update({ status })
-        .eq("id", formId);
-
-      if (error) throw error;
-
-      setForms(forms.map(form => 
-        form.id === formId ? { ...form, status } : form
-      ));
-
-      toast({
-        title: "تم التحديث",
-        description: "تم تحديث حالة النموذج بنجاح",
-      });
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast({
-        title: "خطأ في التحديث",
-        description: "حدث خطأ أثناء تحديث الحالة",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <Badge variant="secondary">في الانتظار</Badge>;
-      case "reviewed":
-        return <Badge variant="outline">تم المراجعة</Badge>;
-      case "scheduled":
-        return <Badge variant="default">تم الجدولة</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  if (selectedForm) {
+  if (showForm) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button onClick={() => setSelectedForm(null)} variant="outline">
-            العودة للقائمة
+          <Button onClick={() => setShowForm(false)} variant="outline">
+            العودة
           </Button>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => updateFormStatus(selectedForm.id, "reviewed")}
-              variant="outline"
-              disabled={selectedForm.status === "reviewed"}
-            >
-              تم المراجعة
-            </Button>
-            <Button 
-              onClick={() => updateFormStatus(selectedForm.id, "scheduled")}
-              variant="healing"
-              disabled={selectedForm.status === "scheduled"}
-            >
-              جدولة موعد
-            </Button>
-          </div>
         </div>
 
-        <Card>
+        <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              تفاصيل النموذج - {selectedForm.patient_name}
-            </CardTitle>
-            <CardDescription>
-              تم الإرسال في {format(new Date(selectedForm.submitted_at), "dd/MM/yyyy - HH:mm")}
-            </CardDescription>
+            <CardTitle>نموذج موعد مريض جديد</CardTitle>
+            <CardDescription>أدخل بيانات المريض وموعده</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Personal Information */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">المعلومات الشخصية</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <strong>الاسم:</strong> {selectedForm.patient_name}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  <strong>الهاتف:</strong> {selectedForm.patient_phone}
-                </div>
-                {selectedForm.patient_email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    <strong>البريد:</strong> {selectedForm.patient_email}
-                  </div>
+          <CardContent>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="patient_name">اسم المريض *</Label>
+                <Input
+                  id="patient_name"
+                  {...form.register("patient_name")}
+                  placeholder="أدخل اسم المريض"
+                />
+                {form.formState.errors.patient_name && (
+                  <p className="text-sm text-destructive">{form.formState.errors.patient_name.message}</p>
                 )}
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <strong>تاريخ الميلاد:</strong> {format(new Date(selectedForm.date_of_birth), "dd/MM/yyyy")}
-                </div>
               </div>
-            </div>
 
-            {/* Medical Information */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">المعلومات الطبية</h3>
-              <div className="space-y-3">
-                <div>
-                  <strong>الحالة الرئيسية:</strong>
-                  <p className="mt-1 p-3 bg-muted rounded-md">{selectedForm.chief_complaint}</p>
-                </div>
-                {selectedForm.medical_history && (
-                  <div>
-                    <strong>التاريخ المرضي:</strong>
-                    <p className="mt-1 p-3 bg-muted rounded-md">{selectedForm.medical_history}</p>
-                  </div>
-                )}
-                {selectedForm.current_medications && (
-                  <div>
-                    <strong>الأدوية الحالية:</strong>
-                    <p className="mt-1 p-3 bg-muted rounded-md">{selectedForm.current_medications}</p>
-                  </div>
-                )}
-                {selectedForm.allergies && (
-                  <div>
-                    <strong>الحساسية:</strong>
-                    <p className="mt-1 p-3 bg-muted rounded-md">{selectedForm.allergies}</p>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="age">العمر *</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  {...form.register("age", { valueAsNumber: true })}
+                  placeholder="أدخل العمر"
+                />
+                {form.formState.errors.age && (
+                  <p className="text-sm text-destructive">{form.formState.errors.age.message}</p>
                 )}
               </div>
-            </div>
 
-            {/* Appointment Preferences */}
-            {(selectedForm.preferred_appointment_date || selectedForm.preferred_appointment_time) && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3">تفضيلات الموعد</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedForm.preferred_appointment_date && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <strong>التاريخ المفضل:</strong> {format(new Date(selectedForm.preferred_appointment_date), "dd/MM/yyyy")}
-                    </div>
-                  )}
-                  {selectedForm.preferred_appointment_time && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <strong>الوقت المفضل:</strong> {selectedForm.preferred_appointment_time}
-                    </div>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="id_number">رقم الهوية *</Label>
+                <Input
+                  id="id_number"
+                  {...form.register("id_number")}
+                  placeholder="أدخل رقم الهوية"
+                />
+                {form.formState.errors.id_number && (
+                  <p className="text-sm text-destructive">{form.formState.errors.id_number.message}</p>
+                )}
               </div>
-            )}
 
-            {/* Additional Notes */}
-            {selectedForm.additional_notes && (
-              <div>
-                <strong>ملاحظات إضافية:</strong>
-                <p className="mt-1 p-3 bg-muted rounded-md">{selectedForm.additional_notes}</p>
+              <div className="space-y-2">
+                <Label>تاريخ الموعد *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !form.watch("appointment_date") && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.watch("appointment_date") ? (
+                        format(form.watch("appointment_date"), "dd/MM/yyyy")
+                      ) : (
+                        <span>اختر تاريخ الموعد</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.watch("appointment_date")}
+                      onSelect={(date) => form.setValue("appointment_date", date as Date)}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.appointment_date && (
+                  <p className="text-sm text-destructive">{form.formState.errors.appointment_date.message}</p>
+                )}
               </div>
-            )}
+
+              <div className="space-y-2">
+                <Label htmlFor="appointment_time">وقت الموعد *</Label>
+                <Input
+                  id="appointment_time"
+                  type="time"
+                  {...form.register("appointment_time")}
+                />
+                {form.formState.errors.appointment_time && (
+                  <p className="text-sm text-destructive">{form.formState.errors.appointment_time.message}</p>
+                )}
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                variant="healing"
+                disabled={loading}
+              >
+                {loading ? "جاري الحفظ..." : "حفظ الموعد"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -272,64 +195,22 @@ const FormsManagement = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-primary">إدارة النماذج</h2>
-          <p className="text-muted-foreground">إدارة نماذج المرضى والمواعيد</p>
+          <h2 className="text-2xl font-bold text-primary">النماذج</h2>
+          <p className="text-muted-foreground">إضافة مواعيد المرضى</p>
         </div>
-        <Button onClick={generateShareableLink} className="flex items-center gap-2">
+        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          إنشاء رابط نموذج جديد
+          إضافة موعد مريض جديد
         </Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>النماذج المرسلة</CardTitle>
-          <CardDescription>قائمة بجميع النماذج التي تم إرسالها من المرضى</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-4">جاري التحميل...</div>
-          ) : forms.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا توجد نماذج مرسلة حتى الآن</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>اسم المريض</TableHead>
-                  <TableHead>رقم الهاتف</TableHead>
-                  <TableHead>الحالة الرئيسية</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>تاريخ الإرسال</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {forms.map((form) => (
-                  <TableRow key={form.id}>
-                    <TableCell className="font-medium">{form.patient_name}</TableCell>
-                    <TableCell>{form.patient_phone}</TableCell>
-                    <TableCell className="max-w-xs truncate">{form.chief_complaint}</TableCell>
-                    <TableCell>{getStatusBadge(form.status)}</TableCell>
-                    <TableCell>{format(new Date(form.submitted_at), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedForm(form)}
-                        className="flex items-center gap-1"
-                      >
-                        <Eye className="w-3 h-3" />
-                        عرض
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Plus className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">إضافة موعد مريض</h3>
+          <p className="text-muted-foreground text-center mb-4">
+            انقر على الزر أعلاه لإضافة موعد مريض جديد
+          </p>
         </CardContent>
       </Card>
     </div>
