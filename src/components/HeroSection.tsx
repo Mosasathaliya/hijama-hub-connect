@@ -9,7 +9,7 @@ const HeroSection = () => {
           <div className="space-y-6 text-center">
             <div className="flex justify-center">
               <img 
-                src="/lovable-uploads/053374fe-45fc-4b67-ab15-d5edc163ad02.png"
+                src="/lovable-uploads/71e101ef-25e8-4d86-8d58-98dc2069ebba.png"
                 alt="شعار مركز الخير تداوي للحجامة"
                 className="w-32 h-32 md:w-40 md:h-40 object-contain"
               />
