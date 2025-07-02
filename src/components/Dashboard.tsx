@@ -11,7 +11,8 @@ import {
   Receipt, 
   FileText,
   UserCog,
-  DollarSign
+  DollarSign,
+  MapPin
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import FormsManagement from "@/components/FormsManagement";
@@ -19,6 +20,7 @@ import AppointmentsSection from "@/components/AppointmentsSection";
 import AddDoctorSection from "@/components/AddDoctorSection";
 import HijamaCupPricingSection from "@/components/HijamaCupPricingSection";
 import TreatmentSection from "@/components/TreatmentSection";
+import HijamaPointsViewSection from "@/components/HijamaPointsViewSection";
 import PaymentAndAssignDoctorSection from "@/components/PaymentAndAssignDoctorSection";
 import { useState } from "react";
 
@@ -52,6 +54,10 @@ const Dashboard = () => {
 
   if (activeSection === "دفع وتعيين طبيب") {
     return <PaymentAndAssignDoctorSection onBack={() => setActiveSection(null)} paymentData={paymentData} />;
+  }
+
+  if (activeSection === "نقاط الحجامة المحددة") {
+    return <HijamaPointsViewSection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
@@ -114,6 +120,12 @@ const Dashboard = () => {
       description: "النماذج والاستمارات",
       icon: FileText,
       color: "bg-yellow-500",
+    },
+    {
+      title: "نقاط الحجامة المحددة",
+      description: "عرض جميع نقاط الحجامة المحددة للمرضى",
+      icon: MapPin,
+      color: "bg-red-500",
     },
     {
       title: "أسعار كؤوس الحجامة",
