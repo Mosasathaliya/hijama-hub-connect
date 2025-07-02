@@ -18,6 +18,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import HijamaReadingsDialog from "./HijamaReadingsDialog";
 
 interface Patient {
   id: string;
@@ -361,6 +362,11 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
                           <Save className="w-3 h-3" />
                           حفظ حالات العلاج
                         </Button>
+                        
+                        <HijamaReadingsDialog 
+                          patientId={patient.id}
+                          patientName={patient.patient_name}
+                        />
                         
                         <Button
                           variant="outline"
