@@ -29,7 +29,7 @@ import UserManagementSection from "@/components/UserManagementSection";
 import { useState } from "react";
 
 const Dashboard = () => {
-  const { logout } = useAuth();
+  const { logout, userPermissions } = useAuth();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
 
@@ -192,7 +192,9 @@ const Dashboard = () => {
 
         {/* Menu Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {menuItems.map((item, index) => (
+          {menuItems
+            .filter(item => userPermissions.length === 0 || userPermissions.includes(item.title))
+            .map((item, index) => (
             <Card 
               key={index} 
               className="hover:shadow-glow transition-all duration-300 cursor-pointer group hover:scale-105 border-primary/10"

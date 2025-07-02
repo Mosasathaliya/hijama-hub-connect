@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (code: string) => Promise<boolean>;
 }
 
 const LoginPage = ({ onLogin }: LoginPageProps) => {
@@ -13,14 +13,14 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (code === "1234") {
-        localStorage.setItem("hijama_logged_in", "true");
-        onLogin();
+    try {
+      const success = await onLogin(code);
+      
+      if (success) {
         toast({
           title: "تم تسجيل الدخول بنجاح",
           description: "مرحباً بك في مركز الخير تداوي للحجامة",
@@ -28,12 +28,19 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
       } else {
         toast({
           title: "خطأ في الكود",
-          description: "الرجاء إدخال الكود الصحيح",
+          description: "الرجاء إدخال الكود الصحيح أو التأكد من أن المستخدم نشط",
           variant: "destructive",
         });
       }
-      setIsLoading(false);
-    }, 500);
+    } catch (error) {
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: "حدث خطأ أثناء تسجيل الدخول",
+        variant: "destructive",
+      });
+    }
+    
+    setIsLoading(false);
   };
 
   return (
