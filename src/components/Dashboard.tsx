@@ -86,6 +86,12 @@ const Dashboard = () => {
       color: "bg-blue-600",
     },
     {
+      title: "نقاط الحجامة المحددة",
+      description: "عرض جميع نقاط الحجامة المحددة للمرضى",
+      icon: MapPin,
+      color: "bg-red-500",
+    },
+    {
       title: "المدفوعات",
       description: "إدارة المدفوعات والفواتير",
       icon: CreditCard,
@@ -120,12 +126,6 @@ const Dashboard = () => {
       description: "النماذج والاستمارات",
       icon: FileText,
       color: "bg-yellow-500",
-    },
-    {
-      title: "نقاط الحجامة المحددة",
-      description: "عرض جميع نقاط الحجامة المحددة للمرضى",
-      icon: MapPin,
-      color: "bg-red-500",
     },
     {
       title: "أسعار كؤوس الحجامة",
