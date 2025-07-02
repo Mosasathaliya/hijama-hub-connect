@@ -10,7 +10,6 @@ import {
   UserPlus, 
   Receipt, 
   FileText,
-  UserCheck,
   UserCog
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,12 +65,6 @@ const Dashboard = () => {
       description: "تسجيل مريض جديد",
       icon: UserPlus,
       color: "bg-indigo-500",
-    },
-    {
-      title: "مريض وافد جديد",
-      description: "تسجيل مريض وافد بدون موعد",
-      icon: UserCheck,
-      color: "bg-cyan-500",
     },
     {
       title: "إضافة طبيب جديد",
