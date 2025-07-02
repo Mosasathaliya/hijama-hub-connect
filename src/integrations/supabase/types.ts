@@ -42,6 +42,36 @@ export type Database = {
         }
         Relationships: []
       }
+      hijama_cup_prices: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          number_of_cups: number
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          number_of_cups: number
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          number_of_cups?: number
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_forms: {
         Row: {
           additional_notes: string | null

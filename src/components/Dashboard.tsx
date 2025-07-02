@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import FormsManagement from "@/components/FormsManagement";
 import AppointmentsSection from "@/components/AppointmentsSection";
 import AddDoctorSection from "@/components/AddDoctorSection";
+import HijamaCupPricingSection from "@/components/HijamaCupPricingSection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -33,6 +34,10 @@ const Dashboard = () => {
 
   if (activeSection === "إضافة طبيب جديد") {
     return <AddDoctorSection onBack={() => setActiveSection(null)} />;
+  }
+
+  if (activeSection === "أسعار كؤوس الحجامة") {
+    return <HijamaCupPricingSection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
