@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,7 +26,7 @@ const PaymentDialog = ({
   patientPhone,
   appointmentDate,
   appointmentTime,
-  treatmentConditions,
+  treatmentConditions = [], // Add default empty array
   hijamaPointsCount,
   calculatedPrice
 }: PaymentDialogProps) => {
@@ -96,11 +97,15 @@ const PaymentDialog = ({
               <div>
                 <h4 className="font-medium mb-2">الحالات المعالجة:</h4>
                 <div className="flex flex-wrap gap-2">
-                  {treatmentConditions.map((condition, index) => (
-                    <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800">
-                      {condition}
-                    </Badge>
-                  ))}
+                  {treatmentConditions && treatmentConditions.length > 0 ? (
+                    treatmentConditions.map((condition, index) => (
+                      <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800">
+                        {condition}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-sm">لم يتم تحديد حالات العلاج</span>
+                  )}
                 </div>
               </div>
               
