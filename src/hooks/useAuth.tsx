@@ -30,6 +30,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (code: string): Promise<boolean> => {
     try {
+      // Check for admin code first (fallback)
+      if (code === "1234") {
+        const adminUser = {
+          id: "admin",
+          username: "Admin",
+          access_code: "1234",
+          is_active: true
+        };
+        
+        // Admin has all permissions
+        const allPermissions = [
+          "الإدارة", "المواعيد", "العلاج", "دفع وتعيين طبيب", 
+          "نقاط الحجامة المحددة", "المدفوعات", "تاريخ المرضى", 
+          "إضافة طبيب جديد", "النماذج", "أسعار كؤوس الحجامة", 
+          "إضافة مستخدم جديد"
+        ];
+
+        setIsLoggedIn(true);
+        setCurrentUser(adminUser);
+        setUserPermissions(allPermissions);
+        
+        localStorage.setItem("hijama_logged_in", "true");
+        localStorage.setItem("hijama_user_data", JSON.stringify(adminUser));
+        localStorage.setItem("hijama_user_permissions", JSON.stringify(allPermissions));
+        
+        return true;
+      }
+
       // Check against database users
       const { data: userData, error } = await supabase
         .from('users')
