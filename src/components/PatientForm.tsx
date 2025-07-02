@@ -179,7 +179,13 @@ const PatientForm = () => {
                         mode="single"
                         selected={form.watch("appointment_date")}
                         onSelect={(date) => form.setValue("appointment_date", date as Date)}
-                        disabled={(date) => date < new Date()}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const checkDate = new Date(date);
+                          checkDate.setHours(0, 0, 0, 0);
+                          return checkDate < today;
+                        }}
                         initialFocus
                         className="pointer-events-auto"
                       />
