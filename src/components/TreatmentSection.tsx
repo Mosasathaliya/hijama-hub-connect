@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   Stethoscope, 
   User,
@@ -11,7 +12,8 @@ import {
   Calendar,
   Clock,
   CheckCircle,
-  Save
+  Save,
+  ChevronDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -292,28 +294,60 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
                           حالات العلاج المطلوبة
                         </h4>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {TREATMENT_CONDITIONS.map((condition, index) => {
-                            const isChecked = treatmentConditions[patient.id]?.find(
-                              c => c.condition_name === condition
-                            )?.is_checked || false;
-                            
-                            return (
-                              <div key={condition} className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id={`${patient.id}-${index}`}
-                                  checked={isChecked}
-                                  onCheckedChange={() => toggleCondition(patient.id, condition)}
-                                />
-                                <label
-                                  htmlFor={`${patient.id}-${index}`}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between bg-white border-gray-300">
+                              <span>اختر حالات العلاج المطلوبة</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent 
+                            className="w-full max-w-md bg-white border border-gray-200 shadow-lg z-50 max-h-96 overflow-y-auto"
+                            align="start"
+                          >
+                            {TREATMENT_CONDITIONS.map((condition, index) => {
+                              const isChecked = treatmentConditions[patient.id]?.find(
+                                c => c.condition_name === condition
+                              )?.is_checked || false;
+                              
+                              return (
+                                <DropdownMenuItem 
+                                  key={condition} 
+                                  className="flex items-center space-x-2 space-x-reverse p-3 hover:bg-gray-50 cursor-pointer"
+                                  onSelect={(e) => e.preventDefault()}
+                                  onClick={() => toggleCondition(patient.id, condition)}
                                 >
-                                  {index + 1}. {condition}
-                                </label>
-                              </div>
-                            );
-                          })}
+                                  <Checkbox
+                                    id={`${patient.id}-${index}`}
+                                    checked={isChecked}
+                                    onChange={() => {}}
+                                    className="pointer-events-none"
+                                  />
+                                  <label
+                                    htmlFor={`${patient.id}-${index}`}
+                                    className="text-sm font-medium leading-none cursor-pointer flex-1"
+                                  >
+                                    {index + 1}. {condition}
+                                  </label>
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        
+                        {/* Display selected conditions */}
+                        <div className="mt-3">
+                          <p className="text-sm font-medium mb-2">الحالات المختارة:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {treatmentConditions[patient.id]?.filter(c => c.is_checked).map((condition, index) => (
+                              <Badge key={condition.condition_name} variant="secondary" className="bg-purple-100 text-purple-800">
+                                {condition.condition_name}
+                              </Badge>
+                            ))}
+                            {(!treatmentConditions[patient.id]?.some(c => c.is_checked)) && (
+                              <span className="text-sm text-muted-foreground">لم يتم اختيار أي حالات بعد</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
