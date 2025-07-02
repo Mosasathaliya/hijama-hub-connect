@@ -18,15 +18,10 @@ import { useToast } from "@/hooks/use-toast";
 const patientFormSchema = z.object({
   patient_name: z.string().min(2, "الاسم مطلوب"),
   patient_phone: z.string().min(8, "رقم الهاتف مطلوب"),
-  patient_email: z.string().email("بريد إلكتروني صحيح مطلوب").optional().or(z.literal("")),
-  date_of_birth: z.date({ required_error: "تاريخ الميلاد مطلوب" }),
-  medical_history: z.string().optional(),
-  current_medications: z.string().optional(),
-  allergies: z.string().optional(),
-  chief_complaint: z.string().min(10, "وصف الحالة مطلوب (10 أحرف على الأقل)"),
-  preferred_appointment_date: z.date().optional(),
-  preferred_appointment_time: z.string().optional(),
-  additional_notes: z.string().optional(),
+  age: z.number().min(1, "العمر مطلوب").max(120, "عمر غير صحيح"),
+  appointment_date: z.date({ required_error: "تاريخ الموعد المطلوب" }),
+  appointment_time: z.string().min(1, "وقت الموعد مطلوب"),
+  medical_notes: z.string().optional(),
 });
 
 type PatientFormData = z.infer<typeof patientFormSchema>;
@@ -59,15 +54,15 @@ const PatientForm = ({ token }: PatientFormProps) => {
       const formData = {
         patient_name: data.patient_name,
         patient_phone: data.patient_phone,
-        patient_email: data.patient_email || null,
-        date_of_birth: data.date_of_birth.toISOString().split('T')[0],
-        medical_history: data.medical_history || null,
-        current_medications: data.current_medications || null,
-        allergies: data.allergies || null,
-        chief_complaint: data.chief_complaint,
-        preferred_appointment_date: data.preferred_appointment_date?.toISOString().split('T')[0] || null,
-        preferred_appointment_time: data.preferred_appointment_time || null,
-        additional_notes: data.additional_notes || null,
+        patient_email: null,
+        date_of_birth: new Date(new Date().getFullYear() - data.age, 0, 1).toISOString().split('T')[0],
+        medical_history: data.medical_notes || null,
+        current_medications: null,
+        allergies: null,
+        chief_complaint: `طلب موعد - العمر: ${data.age} سنة`,
+        preferred_appointment_date: data.appointment_date.toISOString().split('T')[0],
+        preferred_appointment_time: data.appointment_time,
+        additional_notes: data.medical_notes || null,
         form_token: token,
       };
 
@@ -80,7 +75,7 @@ const PatientForm = ({ token }: PatientFormProps) => {
       setSubmitted(true);
       toast({
         title: "تم الإرسال بنجاح",
-        description: "تم إرسال النموذج بنجاح. سيتم التواصل معك قريباً",
+        description: "تم إرسال طلب الموعد بنجاح. سيتم التواصل معك قريباً",
       });
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -102,7 +97,7 @@ const PatientForm = ({ token }: PatientFormProps) => {
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-primary mb-2">تم الإرسال بنجاح</h2>
             <p className="text-muted-foreground">
-              شكراً لك! تم إرسال النموذج بنجاح. سيتم التواصل معك قريباً لتحديد موعد.
+              شكراً لك! تم إرسال طلب الموعد بنجاح. سيتم التواصل معك قريباً لتأكيد الموعد.
             </p>
           </CardContent>
         </Card>
@@ -123,15 +118,14 @@ const PatientForm = ({ token }: PatientFormProps) => {
               />
               <div>
                 <CardTitle className="text-2xl text-primary">مركز الخير تداوي للحجامة</CardTitle>
-                <CardDescription>نموذج معلومات المريض</CardDescription>
+                <CardDescription>طلب موعد جديد</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Personal Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-primary">المعلومات الشخصية</h3>
+                <h3 className="text-lg font-semibold text-primary">معلومات المريض</h3>
                 
                 <div className="space-y-2">
                   <Label htmlFor="patient_name">الاسم الكامل *</Label>
@@ -158,155 +152,75 @@ const PatientForm = ({ token }: PatientFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="patient_email">البريد الإلكتروني</Label>
+                  <Label htmlFor="age">العمر *</Label>
                   <Input
-                    id="patient_email"
-                    type="email"
-                    {...form.register("patient_email")}
-                    placeholder="example@email.com"
+                    id="age"
+                    type="number"
+                    {...form.register("age", { valueAsNumber: true })}
+                    placeholder="أدخل عمرك"
                   />
-                  {form.formState.errors.patient_email && (
-                    <p className="text-sm text-destructive">{form.formState.errors.patient_email.message}</p>
+                  {form.formState.errors.age && (
+                    <p className="text-sm text-destructive">{form.formState.errors.age.message}</p>
                   )}
                 </div>
+              </div>
 
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-primary">تفاصيل الموعد</h3>
+                
                 <div className="space-y-2">
-                  <Label>تاريخ الميلاد *</Label>
+                  <Label>تاريخ الموعد المطلوب *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !form.watch("date_of_birth") && "text-muted-foreground"
+                          !form.watch("appointment_date") && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {form.watch("date_of_birth") ? (
-                          format(form.watch("date_of_birth"), "dd/MM/yyyy")
+                        {form.watch("appointment_date") ? (
+                          format(form.watch("appointment_date"), "dd/MM/yyyy")
                         ) : (
-                          <span>اختر تاريخ الميلاد</span>
+                          <span>اختر تاريخ الموعد</span>
                         )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={form.watch("date_of_birth")}
-                        onSelect={(date) => form.setValue("date_of_birth", date as Date)}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {form.formState.errors.date_of_birth && (
-                    <p className="text-sm text-destructive">{form.formState.errors.date_of_birth.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Medical Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-primary">المعلومات الطبية</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="chief_complaint">وصف الحالة أو الشكوى الرئيسية *</Label>
-                  <Textarea
-                    id="chief_complaint"
-                    {...form.register("chief_complaint")}
-                    placeholder="صف حالتك أو الأعراض التي تعاني منها بالتفصيل"
-                    rows={3}
-                  />
-                  {form.formState.errors.chief_complaint && (
-                    <p className="text-sm text-destructive">{form.formState.errors.chief_complaint.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="medical_history">التاريخ المرضي</Label>
-                  <Textarea
-                    id="medical_history"
-                    {...form.register("medical_history")}
-                    placeholder="أي أمراض سابقة أو عمليات جراحية"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="current_medications">الأدوية الحالية</Label>
-                  <Textarea
-                    id="current_medications"
-                    {...form.register("current_medications")}
-                    placeholder="اذكر الأدوية التي تتناولها حالياً"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="allergies">الحساسية</Label>
-                  <Textarea
-                    id="allergies"
-                    {...form.register("allergies")}
-                    placeholder="أي حساسية من أدوية أو مواد معينة"
-                    rows={2}
-                  />
-                </div>
-              </div>
-
-              {/* Appointment Preferences */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-primary">تفضيلات الموعد</h3>
-                
-                <div className="space-y-2">
-                  <Label>التاريخ المفضل للموعد</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !form.watch("preferred_appointment_date") && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {form.watch("preferred_appointment_date") ? (
-                          format(form.watch("preferred_appointment_date"), "dd/MM/yyyy")
-                        ) : (
-                          <span>اختر التاريخ المفضل</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={form.watch("preferred_appointment_date")}
-                        onSelect={(date) => form.setValue("preferred_appointment_date", date as Date)}
+                        selected={form.watch("appointment_date")}
+                        onSelect={(date) => form.setValue("appointment_date", date as Date)}
                         disabled={(date) => date < new Date()}
                         initialFocus
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
+                  {form.formState.errors.appointment_date && (
+                    <p className="text-sm text-destructive">{form.formState.errors.appointment_date.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="preferred_appointment_time">الوقت المفضل</Label>
+                  <Label htmlFor="appointment_time">وقت الموعد المطلوب *</Label>
                   <Input
-                    id="preferred_appointment_time"
+                    id="appointment_time"
                     type="time"
-                    {...form.register("preferred_appointment_time")}
+                    {...form.register("appointment_time")}
                   />
+                  {form.formState.errors.appointment_time && (
+                    <p className="text-sm text-destructive">{form.formState.errors.appointment_time.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="additional_notes">ملاحظات إضافية</Label>
+                  <Label htmlFor="medical_notes">ملاحظات طبية (اختياري)</Label>
                   <Textarea
-                    id="additional_notes"
-                    {...form.register("additional_notes")}
-                    placeholder="أي ملاحظات أو طلبات خاصة"
+                    id="medical_notes"
+                    {...form.register("medical_notes")}
+                    placeholder="اذكر أي معلومات طبية مهمة أو ملاحظات خاصة"
                     rows={3}
                   />
                 </div>
@@ -318,7 +232,7 @@ const PatientForm = ({ token }: PatientFormProps) => {
                 variant="healing"
                 disabled={loading}
               >
-                {loading ? "جاري الإرسال..." : "إرسال النموذج"}
+                {loading ? "جاري الإرسال..." : "إرسال طلب الموعد"}
               </Button>
             </form>
           </CardContent>

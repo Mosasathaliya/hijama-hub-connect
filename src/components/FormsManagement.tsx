@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Link, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +73,27 @@ const FormsManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateShareableLink = async () => {
+    try {
+      // Generate a unique token
+      const token = crypto.randomUUID();
+      const link = `${window.location.origin}/patient-form/${token}`;
+      
+      navigator.clipboard.writeText(link);
+      toast({
+        title: "تم إنشاء الرابط",
+        description: "تم نسخ رابط النموذج إلى الحافظة. شاركه مع المرضى",
+      });
+    } catch (error) {
+      console.error("Error generating link:", error);
+      toast({
+        title: "خطأ في إنشاء الرابط",
+        description: "حدث خطأ أثناء إنشاء الرابط",
+        variant: "destructive",
+      });
     }
   };
 
@@ -196,23 +217,51 @@ const FormsManagement = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-primary">النماذج</h2>
-          <p className="text-muted-foreground">إضافة مواعيد المرضى</p>
+          <p className="text-muted-foreground">إضافة مواعيد المرضى وإنشاء روابط للمرضى</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          إضافة موعد مريض جديد
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={generateShareableLink} variant="outline" className="flex items-center gap-2">
+            <Link className="w-4 h-4" />
+            إنشاء رابط للمرضى
+          </Button>
+          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            إضافة موعد جديد
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Plus className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">إضافة موعد مريض</h3>
-          <p className="text-muted-foreground text-center mb-4">
-            انقر على الزر أعلاه لإضافة موعد مريض جديد
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              إضافة موعد مريض
+            </CardTitle>
+            <CardDescription>إضافة موعد مباشرة من لوحة التحكم</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => setShowForm(true)} variant="healing" className="w-full">
+              إضافة موعد جديد
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link className="w-5 h-5" />
+              رابط للمرضى
+            </CardTitle>
+            <CardDescription>إنشاء رابط يمكن للمرضى استخدامه لحجز مواعيدهم</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={generateShareableLink} variant="outline" className="w-full">
+              إنشاء رابط قابل للمشاركة
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
