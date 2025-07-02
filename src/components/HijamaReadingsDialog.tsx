@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, Weight, MapPin } from "lucide-react";
+import PaymentDialog from "./PaymentDialog";
+import { format } from "date-fns";
 
 interface HijamaPoint {
   id: string;
@@ -17,10 +19,22 @@ interface HijamaPoint {
 interface HijamaReadingsDialogProps {
   patientId: string;
   patientName: string;
+  patientPhone: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  treatmentConditions: string[];
 }
 
-const HijamaReadingsDialog = ({ patientId, patientName }: HijamaReadingsDialogProps) => {
+const HijamaReadingsDialog = ({ 
+  patientId, 
+  patientName, 
+  patientPhone, 
+  appointmentDate, 
+  appointmentTime, 
+  treatmentConditions 
+}: HijamaReadingsDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [bloodPressure, setBloodPressure] = useState({ systolic: "", diastolic: "" });
   const [weight, setWeight] = useState("");
   const [hijamaPoints, setHijamaPoints] = useState<HijamaPoint[]>([]);
@@ -53,6 +67,8 @@ const HijamaReadingsDialog = ({ patientId, patientName }: HijamaReadingsDialogPr
       hijamaPoints
     });
     setIsOpen(false);
+    // Show payment dialog after saving readings
+    setShowPayment(true);
   };
 
   return (
@@ -221,6 +237,18 @@ const HijamaReadingsDialog = ({ patientId, patientName }: HijamaReadingsDialogPr
           </Button>
         </div>
       </DialogContent>
+      
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        patientName={patientName}
+        patientPhone={patientPhone}
+        appointmentDate={appointmentDate}
+        appointmentTime={appointmentTime}
+        treatmentConditions={treatmentConditions}
+        hijamaPointsCount={hijamaPoints.length}
+      />
     </Dialog>
   );
 };

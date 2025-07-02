@@ -366,6 +366,10 @@ const TreatmentSection = ({ onBack }: TreatmentSectionProps) => {
                         <HijamaReadingsDialog 
                           patientId={patient.id}
                           patientName={patient.patient_name}
+                          patientPhone={patient.patient_phone}
+                          appointmentDate={format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}
+                          appointmentTime={patient.preferred_appointment_time}
+                          treatmentConditions={treatmentConditions[patient.id]?.filter(c => c.is_checked).map(c => c.condition_name) || []}
                         />
                         
                         <Button
