@@ -6,8 +6,15 @@ const HeroSection = () => {
     <section className="relative min-h-screen bg-gradient-healing flex items-center justify-center px-4">
       <div className="container max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-8">
-          <div className="space-y-4">
-            <h1 className="text-5xl lg:text-6xl font-bold text-primary leading-tight">
+          <div className="space-y-6 text-center">
+            <div className="flex justify-center">
+              <img 
+                src="/lovable-uploads/053374fe-45fc-4b67-ab15-d5edc163ad02.png"
+                alt="شعار مركز الخير تداوي للحجامة"
+                className="w-32 h-32 md:w-40 md:h-40 object-contain"
+              />
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-bold text-primary leading-tight">
               مركز الخير تداوي
               <span className="block text-primary-glow">للحجامة</span>
             </h1>

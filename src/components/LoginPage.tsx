@@ -40,6 +40,13 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/lovable-uploads/053374fe-45fc-4b67-ab15-d5edc163ad02.png"
+              alt="شعار مركز الخير تداوي للحجامة"
+              className="w-24 h-24 object-contain"
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-primary">
             مركز الخير تداوي للحجامة
           </CardTitle>
