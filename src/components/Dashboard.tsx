@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import FormsManagement from "@/components/FormsManagement";
+import AppointmentsSection from "@/components/AppointmentsSection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -23,6 +24,10 @@ const Dashboard = () => {
 
   if (activeSection === "النماذج") {
     return <FormsManagement />;
+  }
+
+  if (activeSection === "المواعيد") {
+    return <AppointmentsSection />;
   }
 
   const menuItems = [
