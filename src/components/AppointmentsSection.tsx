@@ -359,7 +359,18 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                              className="flex items-center gap-1"
                            >
                              <Stethoscope className="w-3 h-3" />
-                             زيارة
+                             إرسال للعلاج
+                           </Button>
+                         )}
+                         {appointment.status === "in_treatment" && (
+                           <Button
+                             variant="secondary"
+                             size="sm"
+                             disabled
+                             className="flex items-center gap-1 opacity-50 cursor-not-allowed"
+                           >
+                             <Stethoscope className="w-3 h-3" />
+                             تم الإرسال للعلاج
                            </Button>
                          )}
                        </div>
