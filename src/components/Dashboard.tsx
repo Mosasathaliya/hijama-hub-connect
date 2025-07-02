@@ -25,6 +25,7 @@ import PaymentAndAssignDoctorSection from "@/components/PaymentAndAssignDoctorSe
 import PaymentsSection from "@/components/PaymentsSection";
 import PatientHistorySection from "@/components/PatientHistorySection";
 import ManagementSection from "@/components/ManagementSection";
+import UserManagementSection from "@/components/UserManagementSection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -75,6 +76,10 @@ const Dashboard = () => {
     return <PatientHistorySection onBack={() => setActiveSection(null)} />;
   }
 
+  if (activeSection === "إضافة مستخدم جديد") {
+    return <UserManagementSection onBack={() => setActiveSection(null)} />;
+  }
+
   const menuItems = [
     {
       title: "الإدارة",
@@ -120,7 +125,7 @@ const Dashboard = () => {
     },
     {
       title: "إضافة مستخدم جديد",
-      description: "تسجيل مريض جديد",
+      description: "إدارة المستخدمين وصلاحياتهم",
       icon: UserPlus,
       color: "bg-indigo-500",
     },
