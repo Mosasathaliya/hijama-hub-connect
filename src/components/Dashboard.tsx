@@ -220,27 +220,6 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Quick Stats */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-primary/10">
-            <CardHeader className="text-center">
-              <CardTitle className="text-primary">المواعيد اليوم</CardTitle>
-              <div className="text-3xl font-bold text-accent">12</div>
-            </CardHeader>
-          </Card>
-          <Card className="border-primary/10">
-            <CardHeader className="text-center">
-              <CardTitle className="text-primary">المرضى الجدد</CardTitle>
-              <div className="text-3xl font-bold text-accent">3</div>
-            </CardHeader>
-          </Card>
-          <Card className="border-primary/10">
-            <CardHeader className="text-center">
-              <CardTitle className="text-primary">إجمالي الإيرادات</CardTitle>
-              <div className="text-3xl font-bold text-accent">1,250 ر.س</div>
-            </CardHeader>
-          </Card>
-        </div>
       </div>
     </div>
   );
