@@ -76,22 +76,20 @@ const FormsManagement = () => {
     }
   };
 
-  const generateShareableLink = async () => {
+  const copyPatientLink = async () => {
     try {
-      // Generate a unique token
-      const token = crypto.randomUUID();
-      const link = `${window.location.origin}/patient-form/${token}`;
+      const link = `${window.location.origin}/patient-form`;
       
       navigator.clipboard.writeText(link);
       toast({
-        title: "تم إنشاء الرابط",
+        title: "تم نسخ الرابط",
         description: "تم نسخ رابط النموذج إلى الحافظة. شاركه مع المرضى",
       });
     } catch (error) {
-      console.error("Error generating link:", error);
+      console.error("Error copying link:", error);
       toast({
-        title: "خطأ في إنشاء الرابط",
-        description: "حدث خطأ أثناء إنشاء الرابط",
+        title: "خطأ في نسخ الرابط",
+        description: "حدث خطأ أثناء نسخ الرابط",
         variant: "destructive",
       });
     }
@@ -220,9 +218,9 @@ const FormsManagement = () => {
           <p className="text-muted-foreground">إضافة مواعيد المرضى وإنشاء روابط للمرضى</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={generateShareableLink} variant="outline" className="flex items-center gap-2">
+          <Button onClick={copyPatientLink} variant="outline" className="flex items-center gap-2">
             <Link className="w-4 h-4" />
-            إنشاء رابط للمرضى
+            نسخ رابط للمرضى
           </Button>
           <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -253,11 +251,11 @@ const FormsManagement = () => {
               <Link className="w-5 h-5" />
               رابط للمرضى
             </CardTitle>
-            <CardDescription>إنشاء رابط يمكن للمرضى استخدامه لحجز مواعيدهم</CardDescription>
+            <CardDescription>رابط ثابت يمكن للمرضى استخدامه لحجز مواعيدهم</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={generateShareableLink} variant="outline" className="w-full">
-              إنشاء رابط قابل للمشاركة
+            <Button onClick={copyPatientLink} variant="outline" className="w-full">
+              نسخ الرابط
             </Button>
           </CardContent>
         </Card>

@@ -17,7 +17,7 @@ const AppContent = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/patient-form/:token" element={<PatientFormPage />} />
+        <Route path="/patient-form" element={<PatientFormPage />} />
         <Route path="/" element={isLoggedIn ? <Index /> : <LoginPage onLogin={login} />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

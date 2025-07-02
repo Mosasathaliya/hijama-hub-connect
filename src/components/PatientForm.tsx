@@ -26,11 +26,7 @@ const patientFormSchema = z.object({
 
 type PatientFormData = z.infer<typeof patientFormSchema>;
 
-interface PatientFormProps {
-  token?: string;
-}
-
-const PatientForm = ({ token }: PatientFormProps) => {
+const PatientForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -40,15 +36,6 @@ const PatientForm = ({ token }: PatientFormProps) => {
   });
 
   const onSubmit = async (data: PatientFormData) => {
-    if (!token) {
-      toast({
-        title: "خطأ",
-        description: "رمز النموذج غير صحيح",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const formData = {
@@ -63,7 +50,7 @@ const PatientForm = ({ token }: PatientFormProps) => {
         preferred_appointment_date: data.appointment_date.toISOString().split('T')[0],
         preferred_appointment_time: data.appointment_time,
         additional_notes: data.medical_notes || null,
-        form_token: token,
+        form_token: crypto.randomUUID(),
       };
 
       const { error } = await supabase
