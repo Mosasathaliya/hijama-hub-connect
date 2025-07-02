@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Weight, MapPin } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface HijamaPoint {
   id: string;
@@ -38,6 +40,63 @@ const HijamaReadingsDialog = ({
   const [bloodPressure, setBloodPressure] = useState({ systolic: "", diastolic: "" });
   const [weight, setWeight] = useState("");
   const [hijamaPoints, setHijamaPoints] = useState<HijamaPoint[]>([]);
+  const [cupPrices, setCupPrices] = useState<any[]>([]);
+  const [calculatedPrice, setCalculatedPrice] = useState(0);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchCupPrices();
+  }, []);
+
+  useEffect(() => {
+    calculatePrice();
+  }, [hijamaPoints, cupPrices]);
+
+  const fetchCupPrices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("hijama_cup_prices")
+        .select("*")
+        .eq("is_active", true)
+        .order("number_of_cups", { ascending: true });
+
+      if (error) throw error;
+      setCupPrices(data || []);
+    } catch (error) {
+      console.error("Error fetching cup prices:", error);
+      toast({
+        title: "خطأ في جلب الأسعار",
+        description: "حدث خطأ أثناء جلب أسعار الكؤوس",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculatePrice = () => {
+    const pointsCount = hijamaPoints.length;
+    
+    if (pointsCount === 0 || cupPrices.length === 0) {
+      setCalculatedPrice(0);
+      return;
+    }
+
+    // Find the appropriate price tier
+    let selectedPrice = cupPrices.find(price => price.number_of_cups === pointsCount);
+    
+    // If exact match not found, find the closest higher tier
+    if (!selectedPrice) {
+      selectedPrice = cupPrices
+        .filter(price => price.number_of_cups >= pointsCount)
+        .sort((a, b) => a.number_of_cups - b.number_of_cups)[0];
+    }
+    
+    // If still no match, use the highest tier
+    if (!selectedPrice && cupPrices.length > 0) {
+      selectedPrice = cupPrices[cupPrices.length - 1];
+    }
+
+    setCalculatedPrice(selectedPrice ? Number(selectedPrice.price) : 0);
+  };
 
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>, view: 'front' | 'back') => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -248,6 +307,7 @@ const HijamaReadingsDialog = ({
         appointmentTime={appointmentTime}
         treatmentConditions={treatmentConditions}
         hijamaPointsCount={hijamaPoints.length}
+        calculatedPrice={calculatedPrice}
       />
     </Dialog>
   );

@@ -15,6 +15,7 @@ interface PaymentDialogProps {
   appointmentTime: string;
   treatmentConditions: string[];
   hijamaPointsCount: number;
+  calculatedPrice: number;
 }
 
 const PaymentDialog = ({ 
@@ -25,14 +26,10 @@ const PaymentDialog = ({
   appointmentDate,
   appointmentTime,
   treatmentConditions,
-  hijamaPointsCount
+  hijamaPointsCount,
+  calculatedPrice
 }: PaymentDialogProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Calculate price based on hijama points (example pricing)
-  const pricePerPoint = 50; // SAR per point
-  const consultationFee = 100; // SAR
-  const totalPrice = (hijamaPointsCount * pricePerPoint) + consultationFee;
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -44,7 +41,7 @@ const PaymentDialog = ({
       // Here you would integrate with actual payment gateway
       console.log("Payment processed for:", {
         patient: patientName,
-        amount: totalPrice,
+        amount: calculatedPrice,
         points: hijamaPointsCount,
         conditions: treatmentConditions
       });
@@ -126,20 +123,15 @@ const PaymentDialog = ({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span>رسوم الاستشارة</span>
-                <span>{consultationFee} ريال</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span>نقاط الحجامة ({hijamaPointsCount} × {pricePerPoint})</span>
-                <span>{hijamaPointsCount * pricePerPoint} ريال</span>
+                <span>جلسة الحجامة ({hijamaPointsCount} نقطة)</span>
+                <span>{calculatedPrice} ريال</span>
               </div>
               
               <Separator />
               
               <div className="flex items-center justify-between text-lg font-bold">
                 <span>المجموع الكلي</span>
-                <span className="text-primary">{totalPrice} ريال</span>
+                <span className="text-primary">{calculatedPrice} ريال</span>
               </div>
             </CardContent>
           </Card>
