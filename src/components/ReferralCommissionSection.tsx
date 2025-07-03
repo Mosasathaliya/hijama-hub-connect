@@ -46,6 +46,32 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
     fetchCoupons();
   }, []);
 
+  // Real-time subscription for payments
+  useEffect(() => {
+    const channel = supabase
+      .channel('payments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments'
+        },
+        (payload) => {
+          console.log('Payment changed:', payload);
+          // If commission calculation is active, recalculate
+          if (selectedCoupon && fromDate && toDate) {
+            calculateCommission();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedCoupon, fromDate, toDate]);
+
   const fetchCoupons = async () => {
     try {
       const { data, error } = await supabase
