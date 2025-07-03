@@ -82,8 +82,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [editingPayment, setEditingPayment] = useState<TodayPayment | null>(null);
   const [editCupsCount, setEditCupsCount] = useState("");
   const [editDoctor, setEditDoctor] = useState("");
+  const [editDiscount, setEditDiscount] = useState("");
   const [cupPrices, setCupPrices] = useState<any[]>([]);
   const [calculatedPrice, setCalculatedPrice] = useState(0);
+  const [finalPrice, setFinalPrice] = useState(0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -96,12 +98,12 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     fetchCupPrices();
   }, []);
 
-  // Calculate price when cups count changes
+  // Calculate price when cups count or discount changes
   useEffect(() => {
     if (editCupsCount && cupPrices.length > 0) {
       calculatePrice();
     }
-  }, [editCupsCount, cupPrices]);
+  }, [editCupsCount, editDiscount, cupPrices]);
 
   const fetchCupPrices = async () => {
     try {
@@ -120,9 +122,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const calculatePrice = () => {
     const cupsCount = parseInt(editCupsCount);
+    const discount = parseFloat(editDiscount) || 0;
     
     if (!cupsCount || cupPrices.length === 0) {
       setCalculatedPrice(0);
+      setFinalPrice(0);
       return;
     }
 
@@ -141,7 +145,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       selectedPrice = cupPrices[cupPrices.length - 1];
     }
 
-    setCalculatedPrice(selectedPrice ? Number(selectedPrice.price) : 0);
+    const basePrice = selectedPrice ? Number(selectedPrice.price) : 0;
+    const finalAmount = Math.max(0, basePrice - discount);
+    
+    setCalculatedPrice(basePrice);
+    setFinalPrice(finalAmount);
   };
 
   // If payment data is passed from treatment section, add it to the list
@@ -261,7 +269,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     setEditingPayment(payment);
     setEditCupsCount(payment.hijama_points_count.toString());
     setEditDoctor(payment.doctor_id);
+    setEditDiscount("0");
     setCalculatedPrice(payment.amount);
+    setFinalPrice(payment.amount);
     setShowEditDialog(true);
   };
 
@@ -273,7 +283,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       const { error: paymentError } = await supabase
         .from("payments")
         .update({
-          amount: calculatedPrice,
+          amount: finalPrice,
           hijama_points_count: parseInt(editCupsCount),
           doctor_id: editDoctor
         })
@@ -291,9 +301,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       if (patientError) throw patientError;
 
+      const discountText = parseFloat(editDiscount) > 0 ? ` (خصم ${editDiscount} ريال)` : "";
       toast({
         title: "تم تحديث البيانات",
-        description: `تم تحديث عدد الكؤوس إلى ${editCupsCount} والمبلغ إلى ${calculatedPrice} ريال`,
+        description: `تم تحديث عدد الكؤوس إلى ${editCupsCount} والمبلغ إلى ${finalPrice} ريال${discountText}`,
       });
 
       fetchTodayPayments();
@@ -663,11 +674,37 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">المبلغ المحسوب</label>
+                    <label className="text-sm font-medium">المبلغ الأساسي</label>
                     <div className="p-2 bg-muted rounded-md">
-                      <span className="text-lg font-bold text-primary">
+                      <span className="text-lg font-medium">
                         {calculatedPrice} ريال
                       </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">مبلغ الخصم</label>
+                    <Input
+                      type="number"
+                      value={editDiscount}
+                      onChange={(e) => setEditDiscount(e.target.value)}
+                      placeholder="مبلغ الخصم (اختياري)"
+                      min="0"
+                      max={calculatedPrice}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">المبلغ النهائي</label>
+                    <div className="p-2 bg-primary/10 rounded-md border border-primary/20">
+                      <span className="text-lg font-bold text-primary">
+                        {finalPrice} ريال
+                      </span>
+                      {parseFloat(editDiscount) > 0 && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          (خصم {editDiscount} ريال)
+                        </span>
+                      )}
                     </div>
                   </div>
                   
@@ -707,7 +744,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   variant="healing" 
                   onClick={saveEditedPayment}
                   className="flex-1 flex items-center gap-2"
-                  disabled={!editCupsCount || !editDoctor || calculatedPrice === 0}
+                  disabled={!editCupsCount || !editDoctor || finalPrice < 0}
                 >
                   <Save className="w-4 h-4" />
                   حفظ التعديلات
