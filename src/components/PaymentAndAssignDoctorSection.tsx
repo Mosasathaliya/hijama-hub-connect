@@ -886,6 +886,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">كوبون الخصم (اختياري)</label>
+                    <div className="text-xs text-blue-600 mb-2">
+                      متوفر {coupons.length} كوبون
+                    </div>
                     <Select value={editSelectedCoupon} onValueChange={setEditSelectedCoupon}>
                       <SelectTrigger>
                         <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
