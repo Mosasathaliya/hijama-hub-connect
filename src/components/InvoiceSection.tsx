@@ -48,6 +48,29 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Real-time subscription for payments
+  useEffect(() => {
+    const channel = supabase
+      .channel('payments-invoice-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments'
+        },
+        (payload) => {
+          console.log('Payment changed, refreshing invoices:', payload);
+          fetchTodayInvoices();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [date]);
+
   // Company Information (ZATCA compliant)
   const COMPANY_INFO = {
     name: "مركز الخير تداوي للحجامة",
@@ -61,19 +84,6 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
 
   useEffect(() => {
     fetchTodayInvoices();
-    
-    // Real-time subscription for new payments
-    const channel = supabase
-      .channel('payments-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'payments' },
-        () => fetchTodayInvoices()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [date]);
 
   const generateInvoiceNumber = (paymentId: string, paymentDate: string) => {
