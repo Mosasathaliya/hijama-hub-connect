@@ -50,7 +50,7 @@ const FormsManagement = ({ onBack }: FormsManagementProps) => {
         current_medications: null,
         allergies: null,
         chief_complaint: `موعد جديد - العمر: ${data.age}, رقم الهوية: ${data.id_number}`,
-        preferred_appointment_date: data.appointment_date.toISOString().split('T')[0],
+        preferred_appointment_date: format(data.appointment_date, 'yyyy-MM-dd'),
         preferred_appointment_time: data.appointment_time,
         additional_notes: null,
         status: 'scheduled'
