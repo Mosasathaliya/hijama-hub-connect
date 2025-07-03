@@ -27,6 +27,7 @@ import PatientHistorySection from "@/components/PatientHistorySection";
 import ManagementSection from "@/components/ManagementSection";
 import UserManagementSection from "@/components/UserManagementSection";
 import InvoiceSection from "@/components/InvoiceSection";
+import CouponSection from "@/components/CouponSection";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -115,6 +116,10 @@ const Dashboard = () => {
     return <InvoiceSection onBack={() => setActiveSection(null)} />;
   }
 
+  if (activeSection === "كوبون") {
+    return <CouponSection onBack={() => setActiveSection(null)} />;
+  }
+
   const menuItems = [
     {
       title: "الإدارة",
@@ -187,6 +192,12 @@ const Dashboard = () => {
       description: "إدارة أسعار كؤوس الحجامة",
       icon: DollarSign,
       color: "bg-pink-500",
+    },
+    {
+      title: "كوبون",
+      description: "إدارة كوبونات الخصم",
+      icon: Receipt,
+      color: "bg-cyan-500",
     },
   ];
 
