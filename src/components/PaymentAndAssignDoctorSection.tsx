@@ -131,7 +131,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   // Calculate edit price with coupon discount
   const calculateEditPriceWithCoupon = (basePrice: number) => {
-    if (!editSelectedCoupon) {
+    if (!editSelectedCoupon || editSelectedCoupon === "none") {
       return Math.max(0, basePrice - (parseFloat(editDiscount) || 0));
     }
 
@@ -751,7 +751,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                       <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">بدون كوبون</SelectItem>
+                      <SelectItem value="none">بدون كوبون</SelectItem>
                       {coupons.map((coupon) => (
                         <SelectItem key={coupon.id} value={coupon.id}>
                           <div className="flex flex-col items-start">
@@ -905,7 +905,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                         <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">بدون كوبون</SelectItem>
+                        <SelectItem value="none">بدون كوبون</SelectItem>
                         {coupons.map((coupon) => (
                           <SelectItem key={coupon.id} value={coupon.id}>
                             <div className="flex flex-col items-start">
@@ -933,13 +933,13 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                       <span className="text-lg font-bold text-primary">
                         {finalPrice} ريال
                       </span>
-                      {(parseFloat(editDiscount) > 0 || editSelectedCoupon) && (
-                        <span className="text-sm text-muted-foreground ml-2">
-                          {parseFloat(editDiscount) > 0 && `(خصم يدوي ${editDiscount} ريال)`}
-                          {editSelectedCoupon && parseFloat(editDiscount) > 0 && " + "}
-                          {editSelectedCoupon && "(خصم كوبون)"}
-                        </span>
-                      )}
+                       {(parseFloat(editDiscount) > 0 || (editSelectedCoupon && editSelectedCoupon !== "none")) && (
+                         <span className="text-sm text-muted-foreground ml-2">
+                           {parseFloat(editDiscount) > 0 && `(خصم يدوي ${editDiscount} ريال)`}
+                           {editSelectedCoupon && editSelectedCoupon !== "none" && parseFloat(editDiscount) > 0 && " + "}
+                           {editSelectedCoupon && editSelectedCoupon !== "none" && "(خصم كوبون)"}
+                         </span>
+                       )}
                     </div>
                   </div>
                   
