@@ -87,19 +87,24 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
   const filterReadings = () => {
     let filtered = [...hijamaReadings];
     
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
     
     if (showTodayOnly && !filterDate) {
-      // Show only today's readings based on reading creation date
-      filtered = filtered.filter(reading => 
-        format(new Date(reading.created_at), 'yyyy-MM-dd') === today
-      );
+      // Show only today's readings based on reading creation date (local timezone)
+      filtered = filtered.filter(reading => {
+        const readingDate = new Date(reading.created_at);
+        return readingDate >= todayStart && readingDate < todayEnd;
+      });
     } else if (filterDate) {
-      // Show readings for the selected date
-      const selectedDate = format(filterDate, 'yyyy-MM-dd');
-      filtered = filtered.filter(reading => 
-        format(new Date(reading.created_at), 'yyyy-MM-dd') === selectedDate
-      );
+      // Show readings for the selected date (local timezone)
+      const selectedStart = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
+      const selectedEnd = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate() + 1);
+      filtered = filtered.filter(reading => {
+        const readingDate = new Date(reading.created_at);
+        return readingDate >= selectedStart && readingDate < selectedEnd;
+      });
     }
     
     setFilteredReadings(filtered);
