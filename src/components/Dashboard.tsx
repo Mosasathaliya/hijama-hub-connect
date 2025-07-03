@@ -199,6 +199,12 @@ const Dashboard = () => {
       icon: Receipt,
       color: "bg-cyan-500",
     },
+    {
+      title: "عمولة الإحالة",
+      description: "إدارة عمولات الإحالة والمندوبين",
+      icon: DollarSign,
+      color: "bg-amber-500",
+    },
   ];
 
   return (
