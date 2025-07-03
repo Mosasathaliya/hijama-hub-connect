@@ -239,8 +239,11 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
         <Card>
           <CardContent className="text-center py-12">
             <Calculator className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">لا توجد بيانات</h3>
-            <p className="text-muted-foreground">اختر الكوبون والفترة الزمنية لعرض العمولة</p>
+            <h3 className="text-lg font-semibold mb-2">لا توجد مدفوعات</h3>
+            <p className="text-muted-foreground">
+              لم يتم العثور على مدفوعات تم استخدام هذا الكوبون فيها خلال الفترة المحددة.<br/>
+              تأكد من اختيار الكوبون الصحيح والفترة الزمنية المناسبة.
+            </p>
           </CardContent>
         </Card>
       )}
