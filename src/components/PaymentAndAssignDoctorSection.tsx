@@ -493,7 +493,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           hijama_points_count: paymentData?.hijamaPointsCount || 0,
           payment_status: "completed",
           payment_method: "cash", // Default to cash, could be made selectable
-          paid_at: new Date().toISOString()
+          paid_at: new Date().toISOString(),
+          coupon_id: selectedCoupon || null
         });
 
       if (paymentError) throw paymentError;
