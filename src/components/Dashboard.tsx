@@ -26,6 +26,7 @@ import PaymentsSection from "@/components/PaymentsSection";
 import PatientHistorySection from "@/components/PatientHistorySection";
 import ManagementSection from "@/components/ManagementSection";
 import UserManagementSection from "@/components/UserManagementSection";
+import InvoiceSection from "@/components/InvoiceSection";
 import { useState } from "react";
 
 const Dashboard = () => {
@@ -80,12 +81,22 @@ const Dashboard = () => {
     return <UserManagementSection onBack={() => setActiveSection(null)} />;
   }
 
+  if (activeSection === "الفواتير") {
+    return <InvoiceSection onBack={() => setActiveSection(null)} />;
+  }
+
   const menuItems = [
     {
       title: "الإدارة",
       description: "إعدادات المركز والإدارة العامة",
       icon: Settings,
       color: "bg-blue-500",
+    },
+    {
+      title: "الفواتير",
+      description: "إدارة الفواتير والحسابات",
+      icon: Receipt,
+      color: "bg-violet-500",
     },
     {
       title: "المواعيد",
