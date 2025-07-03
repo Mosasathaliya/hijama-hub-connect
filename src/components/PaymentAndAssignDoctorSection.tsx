@@ -839,7 +839,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       {/* Edit Payment Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-right flex items-center gap-2">
               <Edit className="w-5 h-5" />
@@ -849,6 +849,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
               تعديل مبلغ الدفع والطبيب المخصص
             </DialogDescription>
           </DialogHeader>
+          
+          {/* TEST - This should always be visible */}
+          <div className="bg-purple-500 text-white p-4 text-center font-bold text-xl">
+            🔥 DIALOG IS OPEN - TEST MESSAGE 🔥
+          </div>
           
           {editingPayment && (
             <div className="space-y-6">
