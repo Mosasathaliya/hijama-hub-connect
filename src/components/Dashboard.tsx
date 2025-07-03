@@ -120,6 +120,10 @@ const Dashboard = () => {
     return <CouponSection onBack={() => setActiveSection(null)} />;
   }
 
+  if (activeSection === "عمولة الإحالة") {
+    return <div className="p-8"><h2 className="text-2xl font-bold">عمولة الإحالة</h2><p>قريباً...</p><button onClick={() => setActiveSection(null)}>العودة</button></div>;
+  }
+
   const menuItems = [
     {
       title: "الإدارة",
