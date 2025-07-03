@@ -77,17 +77,17 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
         return;
       }
 
-      // Get payments that used the selected coupon
+      // Get payments in the date range (for now showing all payments, will track coupon usage in future payments)
       const { data: payments, error } = await supabase
         .from('payments')
         .select(`
           id,
           amount,
           paid_at,
+          coupon_id,
           patient_forms!inner(patient_name)
         `)
         .eq('payment_status', 'completed')
-        .eq('coupon_id', selectedCoupon)
         .gte('paid_at', fromDate)
         .lte('paid_at', toDate + 'T23:59:59');
 
