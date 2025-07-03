@@ -21,6 +21,7 @@ interface Payment {
   patient_name: string;
   patient_phone: string;
   doctor_name: string;
+  is_taxable?: boolean;
 }
 
 interface Invoice {
@@ -128,6 +129,7 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
           paid_at,
           payment_method,
           payment_status,
+          is_taxable,
           patient_forms!inner(
             patient_name,
             patient_phone
@@ -146,8 +148,17 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
       // Convert payments to invoices
       const invoicePromises = paymentsData?.map(async (payment) => {
         const invoiceNumber = generateInvoiceNumber(payment.id, payment.paid_at);
-        const subtotal = Number(payment.amount) / 1.15; // Remove VAT to get subtotal
-        const vatAmount = Number(payment.amount) - subtotal; // 15% VAT
+        const isTaxable = payment.is_taxable || false;
+        
+        // Calculate amounts based on taxable status
+        let subtotal, vatAmount;
+        if (isTaxable) {
+          subtotal = Number(payment.amount) / 1.15; // Remove VAT to get subtotal
+          vatAmount = Number(payment.amount) - subtotal; // 15% VAT
+        } else {
+          subtotal = Number(payment.amount); // No VAT calculation
+          vatAmount = 0; // No VAT for non-taxable
+        }
         
         const invoice: Invoice = {
           id: payment.id,
@@ -161,7 +172,8 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
             payment_status: payment.payment_status,
             patient_name: payment.patient_forms.patient_name,
             patient_phone: payment.patient_forms.patient_phone,
-            doctor_name: payment.doctors.name
+            doctor_name: payment.doctors.name,
+            is_taxable: isTaxable
           },
           issue_date: payment.paid_at,
           due_date: payment.paid_at, // Same day for immediate payment
@@ -220,8 +232,12 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
             <p className="text-sm text-gray-600">الرقم الضريبي: {COMPANY_INFO.taxNumber}</p>
           </div>
           <div className="text-left">
-            <h2 className="text-2xl font-bold text-red-600 mb-2">فاتورة ضريبية</h2>
-            <p className="text-lg font-bold">Tax Invoice</p>
+            <h2 className="text-2xl font-bold text-red-600 mb-2">
+              {invoice.payment.is_taxable ? "فاتورة ضريبية" : "فاتورة"}
+            </h2>
+            <p className="text-lg font-bold">
+              {invoice.payment.is_taxable ? "Tax Invoice" : "Invoice"}
+            </p>
             <div className="mt-4">
               <p className="text-sm"><strong>رقم الفاتورة:</strong> {invoice.invoice_number}</p>
               <p className="text-sm"><strong>تاريخ الإصدار:</strong> {format(new Date(invoice.issue_date), "dd/MM/yyyy")}</p>
@@ -277,10 +293,12 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
               <span>المجموع الفرعي - Subtotal:</span>
               <span>{invoice.subtotal.toFixed(2)} ر.س</span>
             </div>
-            <div className="flex justify-between p-3 border-b border-gray-300">
-              <span>ضريبة القيمة المضافة (15%) - VAT (15%):</span>
-              <span>{invoice.vat_amount.toFixed(2)} ر.س</span>
-            </div>
+            {invoice.payment.is_taxable && (
+              <div className="flex justify-between p-3 border-b border-gray-300">
+                <span>ضريبة القيمة المضافة (15%) - VAT (15%):</span>
+                <span>{invoice.vat_amount.toFixed(2)} ر.س</span>
+              </div>
+            )}
             <div className="flex justify-between p-3 bg-blue-800 text-white font-bold">
               <span>المجموع الكلي - Total Amount:</span>
               <span>{invoice.total_amount.toFixed(2)} ر.س</span>
