@@ -47,7 +47,7 @@ const PatientForm = () => {
         current_medications: null,
         allergies: null,
         chief_complaint: `طلب موعد - العمر: ${data.age} سنة`,
-        preferred_appointment_date: data.appointment_date.toISOString().split('T')[0],
+        preferred_appointment_date: format(data.appointment_date, 'yyyy-MM-dd'),
         preferred_appointment_time: data.appointment_time,
         additional_notes: data.medical_notes || null,
         form_token: crypto.randomUUID(),
