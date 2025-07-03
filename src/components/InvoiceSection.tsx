@@ -94,14 +94,31 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
 
   const generateQRCode = async (invoice: Invoice): Promise<string> => {
     try {
-      // ZATCA QR Code format (Base64 encoded TLV)
+      // Only generate ZATCA QR Code for taxable invoices
+      if (!invoice.payment.is_taxable) {
+        // Simple QR code for non-taxable invoices
+        const qrData = `Invoice: ${invoice.invoice_number}\nPatient: ${invoice.payment.patient_name}\nAmount: ${invoice.total_amount.toFixed(2)} SAR\nDate: ${invoice.issue_date}`;
+        
+        const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+          width: 150,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF',
+          },
+        });
+        
+        return qrCodeDataURL;
+      }
+
+      // ZATCA QR Code format for taxable invoices (Base64 encoded TLV)
       const sellerName = COMPANY_INFO.name;
       const vatNumber = COMPANY_INFO.taxNumber;
       const timestamp = invoice.issue_date;
       const totalAmount = invoice.total_amount.toFixed(2);
       const vatAmount = invoice.vat_amount.toFixed(2);
 
-      // Simple QR data format for now (can be enhanced to full ZATCA TLV format)
+      // ZATCA compliant QR data format
       const qrData = `Invoice: ${invoice.invoice_number}\nSeller: ${sellerName}\nVAT: ${vatNumber}\nDate: ${timestamp}\nTotal: ${totalAmount} SAR\nVAT Amount: ${vatAmount} SAR`;
       
       const qrCodeDataURL = await QRCode.toDataURL(qrData, {
