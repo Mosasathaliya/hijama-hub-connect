@@ -884,13 +884,13 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">كوبون الخصم (اختياري)</label>
-                    <div className="text-xs text-blue-600 mb-2">
-                      متوفر {coupons.length} كوبون
+                  <div className="space-y-2 p-4 bg-red-100 border-2 border-red-500 rounded-lg">
+                    <label className="text-sm font-medium text-red-800">كوبون الخصم (اختياري) - TEST FIELD</label>
+                    <div className="text-lg font-bold text-red-600 bg-yellow-200 p-2 rounded">
+                      متوفر {coupons.length} كوبون - هذا الحقل يجب أن يكون مرئي!
                     </div>
                     <Select value={editSelectedCoupon} onValueChange={setEditSelectedCoupon}>
-                      <SelectTrigger>
+                      <SelectTrigger className="border-red-500 border-2">
                         <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
                       </SelectTrigger>
                       <SelectContent>
