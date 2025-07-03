@@ -46,7 +46,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
-  const [showTodayOnly, setShowTodayOnly] = useState(true);
+  const [showTodayOnly, setShowTodayOnly] = useState(false); // Changed to false to show all appointments by default
   const { toast } = useToast();
 
   useEffect(() => {
