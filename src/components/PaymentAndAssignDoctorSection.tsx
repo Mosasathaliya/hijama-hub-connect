@@ -109,12 +109,18 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("PaymentAndAssignDoctorSection mounted");
     fetchPendingPayments();
     fetchTodayPayments();
     fetchDoctors();
     fetchCupPrices();
     fetchCoupons();
   }, []);
+
+  // Debug effect to log coupons state changes
+  useEffect(() => {
+    console.log("Coupons state changed:", coupons);
+  }, [coupons]);
 
   // Calculate price when cups count or discount changes
   useEffect(() => {
