@@ -25,7 +25,7 @@ import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
 const couponSchema = z.object({
-  code: z.string().min(3, "كود الكوبون يجب أن يكون 3 أحرف على الأقل"),
+  referrer_name: z.string().min(2, "اسم الشخص المرسل مطلوب"),
   discount_type: z.enum(["percentage", "fixed"], { required_error: "نوع الخصم مطلوب" }),
   discount_value: z.number().min(0.01, "قيمة الخصم يجب أن تكون أكثر من 0"),
   max_uses: z.number().min(1, "عدد الاستخدامات يجب أن يكون 1 على الأقل"),
@@ -88,7 +88,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
         const { error } = await supabase
           .from("coupons")
           .update({
-            code: data.code.toUpperCase(),
+            referrer_name: data.referrer_name,
             discount_type: data.discount_type,
             discount_value: data.discount_value,
             max_uses: data.max_uses,
@@ -108,7 +108,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
         const { error } = await supabase
           .from("coupons")
           .insert({
-            code: data.code.toUpperCase(),
+            referrer_name: data.referrer_name,
             discount_type: data.discount_type,
             discount_value: data.discount_value,
             max_uses: data.max_uses,
@@ -140,7 +140,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
   const handleEdit = (coupon: Coupon) => {
     setEditingCoupon(coupon);
     form.reset({
-      code: coupon.code,
+      referrer_name: coupon.referrer_name,
       discount_type: coupon.discount_type as "percentage" | "fixed",
       discount_value: Number(coupon.discount_value),
       max_uses: coupon.max_uses,
@@ -265,7 +265,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>كود الكوبون</TableHead>
+                  <TableHead>اسم الشخص المرسل</TableHead>
                   <TableHead>نوع الخصم</TableHead>
                   <TableHead>قيمة الخصم</TableHead>
                   <TableHead>الاستخدامات</TableHead>
@@ -277,8 +277,8 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
               <TableBody>
                 {coupons.map((coupon) => (
                   <TableRow key={coupon.id}>
-                    <TableCell className="font-mono font-bold">
-                      {coupon.code}
+                    <TableCell className="font-medium">
+                      {coupon.referrer_name}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
@@ -349,15 +349,14 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
           
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="code">كود الكوبون *</Label>
+              <Label htmlFor="referrer_name">اسم الشخص المرسل *</Label>
               <Input
-                id="code"
-                {...form.register("code")}
-                placeholder="أدخل كود الكوبون"
-                className="uppercase"
+                id="referrer_name"
+                {...form.register("referrer_name")}
+                placeholder="أدخل اسم الشخص الذي أرسل المريض"
               />
-              {form.formState.errors.code && (
-                <p className="text-sm text-destructive">{form.formState.errors.code.message}</p>
+              {form.formState.errors.referrer_name && (
+                <p className="text-sm text-destructive">{form.formState.errors.referrer_name.message}</p>
               )}
             </div>
 
