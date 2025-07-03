@@ -97,12 +97,14 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [editDoctor, setEditDoctor] = useState("");
   const [editDiscount, setEditDiscount] = useState("");
   const [editSelectedCoupon, setEditSelectedCoupon] = useState("");
+  const [editIsTaxable, setEditIsTaxable] = useState(false);
   const [cupPrices, setCupPrices] = useState<any[]>([]);
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [finalPrice, setFinalPrice] = useState(0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [selectedCoupon, setSelectedCoupon] = useState<string>("");
+  const [isTaxable, setIsTaxable] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -404,7 +406,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         .update({
           amount: finalPrice,
           hijama_points_count: parseInt(editCupsCount),
-          doctor_id: editDoctor
+          doctor_id: editDoctor,
+          is_taxable: editIsTaxable,
+          coupon_id: editSelectedCoupon && editSelectedCoupon !== "none" ? editSelectedCoupon : null
         })
         .eq("id", editingPayment.id);
 
@@ -494,7 +498,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           payment_status: "completed",
           payment_method: "cash", // Default to cash, could be made selectable
           paid_at: new Date().toISOString(),
-          coupon_id: selectedCoupon || null
+          coupon_id: selectedCoupon || null,
+          is_taxable: isTaxable
         });
 
       if (paymentError) throw paymentError;
@@ -511,6 +516,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       setSelectedPatient(null);
       setSelectedDoctor("");
       setSelectedCoupon("");
+      setIsTaxable(false);
       setPaymentAmount(0);
 
     } catch (error) {
@@ -772,8 +778,32 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                       تم اختيار كوبون خصم صالح
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                 </CardContent>
+               </Card>
+
+               {/* Invoice Type Selection */}
+               <Card>
+                 <CardHeader>
+                   <CardTitle className="text-sm flex items-center gap-2">
+                     <CreditCard className="w-4 h-4" />
+                     نوع الفاتورة
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent className="space-y-3">
+                   <Select value={isTaxable ? "taxable" : "non-taxable"} onValueChange={(value) => setIsTaxable(value === "taxable")}>
+                     <SelectTrigger className="w-full">
+                       <SelectValue placeholder="اختر نوع الفاتورة" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية)</SelectItem>
+                       <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا)</SelectItem>
+                     </SelectContent>
+                   </Select>
+                   <div className="text-xs text-muted-foreground">
+                     {isTaxable ? "سيتم إنشاء فاتورة متوافقة مع زاتكا" : "سيتم إنشاء فاتورة عادية"}
+                   </div>
+                 </CardContent>
+               </Card>
 
               {/* Payment Information */}
               <Card>
@@ -918,7 +948,23 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                         تم اختيار كوبون خصم صالح
                       </div>
                     )}
-                  </div>
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <label className="text-sm font-medium">نوع الفاتورة</label>
+                     <Select value={editIsTaxable ? "taxable" : "non-taxable"} onValueChange={(value) => setEditIsTaxable(value === "taxable")}>
+                       <SelectTrigger>
+                         <SelectValue placeholder="اختر نوع الفاتورة" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية)</SelectItem>
+                         <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا)</SelectItem>
+                       </SelectContent>
+                     </Select>
+                     <div className="text-xs text-muted-foreground">
+                       {editIsTaxable ? "سيتم إنشاء فاتورة متوافقة مع زاتكا" : "سيتم إنشاء فاتورة عادية"}
+                     </div>
+                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium">المبلغ النهائي</label>

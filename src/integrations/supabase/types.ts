@@ -234,6 +234,7 @@ export type Database = {
           doctor_id: string | null
           hijama_points_count: number
           id: string
+          is_taxable: boolean
           paid_at: string | null
           patient_form_id: string
           payment_method: string | null
@@ -247,6 +248,7 @@ export type Database = {
           doctor_id?: string | null
           hijama_points_count?: number
           id?: string
+          is_taxable?: boolean
           paid_at?: string | null
           patient_form_id: string
           payment_method?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           doctor_id?: string | null
           hijama_points_count?: number
           id?: string
+          is_taxable?: boolean
           paid_at?: string | null
           patient_form_id?: string
           payment_method?: string | null
