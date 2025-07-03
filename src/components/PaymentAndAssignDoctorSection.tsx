@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { 
   CreditCard, 
   User,
@@ -68,6 +69,18 @@ interface TodayPayment {
   patient_form_id: string;
 }
 
+interface Coupon {
+  id: string;
+  referrer_name: string;
+  discount_type: string;
+  discount_value: number;
+  referral_percentage: number;
+  is_active: boolean;
+  max_uses: number;
+  used_count: number;
+  expiry_date: string;
+}
+
 interface PaymentAndAssignDoctorSectionProps {
   onBack?: () => void;
   paymentData?: PaymentData;
@@ -88,6 +101,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [finalPrice, setFinalPrice] = useState(0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
+  const [selectedCoupon, setSelectedCoupon] = useState<string>("");
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [paymentAmount, setPaymentAmount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -96,6 +112,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     fetchTodayPayments();
     fetchDoctors();
     fetchCupPrices();
+    fetchCoupons();
   }, []);
 
   // Calculate price when cups count or discount changes
@@ -152,6 +169,13 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     setFinalPrice(finalAmount);
   };
 
+  // Calculate payment amount when coupon changes
+  useEffect(() => {
+    if (paymentData) {
+      calculatePaymentWithCoupon(paymentData.calculatedPrice);
+    }
+  }, [selectedCoupon, paymentData]);
+
   // If payment data is passed from treatment section, add it to the list
   useEffect(() => {
     if (paymentData) {
@@ -167,6 +191,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         submitted_at: new Date().toISOString()
       });
       setShowAssignDialog(true);
+      // Calculate initial payment amount
+      calculatePaymentWithCoupon(paymentData.calculatedPrice);
     }
   }, [paymentData]);
 
@@ -265,6 +291,51 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     }
   };
 
+  const fetchCoupons = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("is_active", true)
+        .gte("expiry_date", new Date().toISOString().split('T')[0])
+        .order("referrer_name", { ascending: true });
+
+      if (error) throw error;
+      setCoupons(data || []);
+    } catch (error) {
+      console.error("Error fetching coupons:", error);
+      toast({
+        title: "خطأ في جلب الكوبونات",
+        description: "حدث خطأ أثناء جلب قائمة الكوبونات",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculatePaymentWithCoupon = (baseAmount: number) => {
+    if (!selectedCoupon) {
+      setPaymentAmount(baseAmount);
+      return baseAmount;
+    }
+
+    const coupon = coupons.find(c => c.id === selectedCoupon);
+    if (!coupon) {
+      setPaymentAmount(baseAmount);
+      return baseAmount;
+    }
+
+    let discountAmount = 0;
+    if (coupon.discount_type === "percentage") {
+      discountAmount = (baseAmount * coupon.discount_value) / 100;
+    } else {
+      discountAmount = coupon.discount_value;
+    }
+
+    const finalAmount = Math.max(0, baseAmount - discountAmount);
+    setPaymentAmount(finalAmount);
+    return finalAmount;
+  };
+
   const handleEditPayment = (payment: TodayPayment) => {
     setEditingPayment(payment);
     setEditCupsCount(payment.hijama_points_count.toString());
@@ -347,13 +418,29 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       if (updateError) throw updateError;
 
-      // Create payment record
+      // If a coupon is selected, update its used count
+      if (selectedCoupon) {
+        const coupon = coupons.find(c => c.id === selectedCoupon);
+        if (coupon) {
+          const { error: couponError } = await supabase
+            .from("coupons")
+            .update({ used_count: coupon.used_count + 1 })
+            .eq("id", selectedCoupon);
+
+          if (couponError) {
+            console.error("Error updating coupon:", couponError);
+            // Don't throw error here as payment should still proceed
+          }
+        }
+      }
+
+      // Create payment record with discounted amount
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           patient_form_id: selectedPatient.id,
           doctor_id: selectedDoctor,
-          amount: paymentData?.calculatedPrice || 0,
+          amount: paymentAmount,
           hijama_points_count: paymentData?.hijamaPointsCount || 0,
           payment_status: "completed",
           payment_method: "cash", // Default to cash, could be made selectable
@@ -373,6 +460,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       setShowAssignDialog(false);
       setSelectedPatient(null);
       setSelectedDoctor("");
+      setSelectedCoupon("");
+      setPaymentAmount(0);
 
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -599,6 +688,43 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                 </CardContent>
               </Card>
 
+              {/* Coupon Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    اختيار كوبون الخصم (اختياري)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Select value={selectedCoupon} onValueChange={setSelectedCoupon}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">بدون كوبون</SelectItem>
+                      {coupons.map((coupon) => (
+                        <SelectItem key={coupon.id} value={coupon.id}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{coupon.referrer_name}</span>
+                            <span className="text-sm text-muted-foreground">
+                              خصم {coupon.discount_value}
+                              {coupon.discount_type === "percentage" ? "%" : " ريال"}
+                              {coupon.referral_percentage > 0 && ` - إحالة ${coupon.referral_percentage}%`}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedCoupon && (
+                    <div className="text-sm text-green-600 bg-green-50 p-2 rounded-md">
+                      تم اختيار كوبون خصم صالح
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Payment Information */}
               <Card>
                 <CardHeader>
@@ -607,13 +733,34 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                     معلومات الدفع
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-lg font-bold">
-                    <span>المبلغ المطلوب:</span>
-                    <span className="text-primary">
-                      {paymentData ? `${paymentData.calculatedPrice} ريال` : "يتم تحديد المبلغ من العلاج"}
-                    </span>
-                  </div>
+                <CardContent className="space-y-3">
+                  {paymentData && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span>المبلغ الأساسي:</span>
+                        <span className="font-medium">{paymentData.calculatedPrice} ريال</span>
+                      </div>
+                      {selectedCoupon && (
+                        <div className="flex items-center justify-between text-green-600">
+                          <span>قيمة الخصم:</span>
+                          <span className="font-medium">
+                            -{(paymentData.calculatedPrice - paymentAmount)} ريال
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-lg font-bold border-t pt-2">
+                        <span>المبلغ النهائي:</span>
+                        <span className="text-primary">
+                          {paymentAmount} ريال
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {!paymentData && (
+                    <div className="text-center text-muted-foreground">
+                      يتم تحديد المبلغ من العلاج
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
