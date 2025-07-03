@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { 
   MapPin, 
   User,
@@ -11,11 +13,14 @@ import {
   Calendar,
   Activity,
   Weight,
-  Eye
+  Eye,
+  Filter,
+  CalendarIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface HijamaPoint {
   id: string;
@@ -42,14 +47,63 @@ interface HijamaPointsViewSectionProps {
 
 const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
   const [hijamaReadings, setHijamaReadings] = useState<HijamaReading[]>([]);
+  const [filteredReadings, setFilteredReadings] = useState<HijamaReading[]>([]);
   const [selectedReading, setSelectedReading] = useState<HijamaReading | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [showTodayOnly, setShowTodayOnly] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchHijamaReadings();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('hijama-readings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'hijama_readings'
+        },
+        () => {
+          console.log('Hijama readings data changed, refetching...');
+          fetchHijamaReadings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  useEffect(() => {
+    filterReadings();
+  }, [hijamaReadings, filterDate, showTodayOnly]);
+
+  const filterReadings = () => {
+    let filtered = [...hijamaReadings];
+    
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    if (showTodayOnly && !filterDate) {
+      // Show only today's readings based on reading creation date
+      filtered = filtered.filter(reading => 
+        format(new Date(reading.created_at), 'yyyy-MM-dd') === today
+      );
+    } else if (filterDate) {
+      // Show readings for the selected date
+      const selectedDate = format(filterDate, 'yyyy-MM-dd');
+      filtered = filtered.filter(reading => 
+        format(new Date(reading.created_at), 'yyyy-MM-dd') === selectedDate
+      );
+    }
+    
+    setFilteredReadings(filtered);
+  };
 
   const fetchHijamaReadings = async () => {
     try {
@@ -129,22 +183,117 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
         </Button>
       </div>
 
-      {/* Hijama Readings Table */}
+      {/* Date Filter Controls */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-red-600" />
-            سجلات نقاط الحجامة ({hijamaReadings.length})
+            <Filter className="w-5 h-5" />
+            تصفية القراءات
           </CardTitle>
-          <CardDescription>جميع قراءات الحجامة مع النقاط المحددة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              variant={showTodayOnly && !filterDate ? "default" : "outline"}
+              onClick={() => {
+                setShowTodayOnly(true);
+                setFilterDate(undefined);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" />
+              قراءات اليوم فقط
+            </Button>
+            
+            <Button
+              variant={!showTodayOnly && !filterDate ? "default" : "outline"}
+              onClick={() => {
+                setShowTodayOnly(false);
+                setFilterDate(undefined);
+              }}
+              className="flex items-center gap-2"
+            >
+              جميع القراءات
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={filterDate ? "default" : "outline"}
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterDate ? format(filterDate, "dd/MM/yyyy") : "اختر تاريخ محدد"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={(date) => {
+                    setFilterDate(date);
+                    setShowTodayOnly(false);
+                  }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {filterDate && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setFilterDate(undefined);
+                  setShowTodayOnly(false);
+                }}
+                className="text-muted-foreground"
+              >
+                إزالة التصفية
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Hijama Readings Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-red-600" />
+              {showTodayOnly && !filterDate 
+                ? `قراءات اليوم (${filteredReadings.length})`
+                : filterDate 
+                  ? `قراءات ${format(filterDate, "dd/MM/yyyy")} (${filteredReadings.length})`
+                  : `جميع قراءات نقاط الحجامة (${filteredReadings.length})`
+              }
+            </span>
+          </CardTitle>
+          <CardDescription>
+            {showTodayOnly && !filterDate 
+              ? "قراءات الحجامة المسجلة اليوم مرتبة من الأحدث للأقدم"
+              : "قراءات الحجامة مع النقاط المحددة مرتبة من الأحدث للأقدم"
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-4">جاري التحميل...</div>
-          ) : hijamaReadings.length === 0 ? (
+          ) : filteredReadings.length === 0 ? (
             <div className="text-center py-8">
               <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا توجد قراءات حجامة محفوظة</p>
+              <p className="text-muted-foreground">
+                {showTodayOnly && !filterDate 
+                  ? "لا توجد قراءات حجامة لليوم" 
+                  : filterDate 
+                    ? "لا توجد قراءات حجامة في التاريخ المحدد"
+                    : "لا توجد قراءات حجامة محفوظة"
+                }
+              </p>
             </div>
           ) : (
             <Table>
@@ -161,7 +310,7 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {hijamaReadings.map((reading) => (
+                {filteredReadings.map((reading) => (
                   <TableRow key={reading.id}>
                     <TableCell className="font-medium">{reading.patient_name}</TableCell>
                     <TableCell>{reading.patient_phone}</TableCell>
