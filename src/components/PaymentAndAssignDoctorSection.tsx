@@ -850,11 +850,6 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
             </DialogDescription>
           </DialogHeader>
           
-          {/* TEST - This should always be visible */}
-          <div className="bg-purple-500 text-white p-4 text-center font-bold text-xl">
-            🔥 DIALOG IS OPEN - TEST MESSAGE 🔥
-          </div>
-          
           {editingPayment && (
             <div className="space-y-6">
               {/* Patient Info */}
@@ -895,13 +890,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                     />
                   </div>
 
-                  <div className="space-y-2 p-4 bg-red-100 border-2 border-red-500 rounded-lg">
-                    <label className="text-sm font-medium text-red-800">كوبون الخصم (اختياري) - TEST FIELD</label>
-                    <div className="text-lg font-bold text-red-600 bg-yellow-200 p-2 rounded">
-                      متوفر {coupons.length} كوبون - هذا الحقل يجب أن يكون مرئي!
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">كوبون الخصم (اختياري)</label>
                     <Select value={editSelectedCoupon} onValueChange={setEditSelectedCoupon}>
-                      <SelectTrigger className="border-red-500 border-2">
+                      <SelectTrigger>
                         <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
                       </SelectTrigger>
                       <SelectContent>
@@ -920,7 +912,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                         ))}
                       </SelectContent>
                     </Select>
-                    {editSelectedCoupon && (
+                    {editSelectedCoupon && editSelectedCoupon !== "none" && (
                       <div className="text-sm text-green-600 bg-green-50 p-2 rounded-md">
                         تم اختيار كوبون خصم صالح
                       </div>
