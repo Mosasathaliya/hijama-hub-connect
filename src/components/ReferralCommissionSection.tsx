@@ -77,8 +77,7 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
         return;
       }
 
-      // For now, we'll simulate commission calculation since we don't have a direct coupon-payment relationship
-      // In a real implementation, you'd need to track which payments used which coupons
+      // Get payments that used the selected coupon
       const { data: payments, error } = await supabase
         .from('payments')
         .select(`
@@ -88,6 +87,7 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
           patient_forms!inner(patient_name)
         `)
         .eq('payment_status', 'completed')
+        .eq('coupon_id', selectedCoupon)
         .gte('paid_at', fromDate)
         .lte('paid_at', toDate + 'T23:59:59');
 

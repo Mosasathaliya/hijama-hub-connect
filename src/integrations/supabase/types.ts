@@ -229,6 +229,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          coupon_id: string | null
           created_at: string
           doctor_id: string | null
           hijama_points_count: number
@@ -241,6 +242,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          coupon_id?: string | null
           created_at?: string
           doctor_id?: string | null
           hijama_points_count?: number
@@ -253,6 +255,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          coupon_id?: string | null
           created_at?: string
           doctor_id?: string | null
           hijama_points_count?: number
@@ -264,6 +267,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_doctor_id_fkey"
             columns: ["doctor_id"]
