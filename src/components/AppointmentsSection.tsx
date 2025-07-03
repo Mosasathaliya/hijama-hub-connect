@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { 
   Calendar, 
   Clock, 
@@ -11,11 +14,14 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Stethoscope
+  Stethoscope,
+  Filter,
+  CalendarIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Appointment {
   id: string;
@@ -36,13 +42,43 @@ interface AppointmentsSectionProps {
 
 const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [showTodayOnly, setShowTodayOnly] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAppointments();
   }, []);
+
+  useEffect(() => {
+    filterAppointments();
+  }, [appointments, filterDate, showTodayOnly]);
+
+  const filterAppointments = () => {
+    let filtered = [...appointments];
+    
+    if (showTodayOnly && !filterDate) {
+      // Show only today's appointments
+      const today = format(new Date(), 'yyyy-MM-dd');
+      filtered = filtered.filter(apt => apt.preferred_appointment_date === today);
+    } else if (filterDate) {
+      // Show appointments for the selected date
+      const selectedDate = format(filterDate, 'yyyy-MM-dd');
+      filtered = filtered.filter(apt => apt.preferred_appointment_date === selectedDate);
+    }
+    
+    // Sort by latest first (newest at top)
+    filtered.sort((a, b) => {
+      const dateA = new Date(`${a.preferred_appointment_date} ${a.preferred_appointment_time}`);
+      const dateB = new Date(`${b.preferred_appointment_date} ${b.preferred_appointment_time}`);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    setFilteredAppointments(filtered);
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -50,7 +86,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
         .from("patient_forms")
         .select("*")
         .not("preferred_appointment_date", "is", null)
-        .order("preferred_appointment_date", { ascending: true });
+        .order("submitted_at", { ascending: false });
 
       if (error) throw error;
       setAppointments(data || []);
@@ -306,19 +342,116 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
         </Card>
       )}
 
-      {/* All Appointments Table */}
+      {/* Date Filter Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>جميع المواعيد</CardTitle>
-          <CardDescription>قائمة شاملة بجميع المواعيد</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            تصفية المواعيد
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              variant={showTodayOnly && !filterDate ? "default" : "outline"}
+              onClick={() => {
+                setShowTodayOnly(true);
+                setFilterDate(undefined);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" />
+              مواعيد اليوم فقط
+            </Button>
+            
+            <Button
+              variant={!showTodayOnly && !filterDate ? "default" : "outline"}
+              onClick={() => {
+                setShowTodayOnly(false);
+                setFilterDate(undefined);
+              }}
+              className="flex items-center gap-2"
+            >
+              جميع المواعيد
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={filterDate ? "default" : "outline"}
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterDate ? format(filterDate, "dd/MM/yyyy") : "اختر تاريخ محدد"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={(date) => {
+                    setFilterDate(date);
+                    setShowTodayOnly(false);
+                  }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {filterDate && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setFilterDate(undefined);
+                  setShowTodayOnly(true);
+                }}
+                className="text-muted-foreground"
+              >
+                إزالة التصفية
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtered Appointments Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>
+              {showTodayOnly && !filterDate 
+                ? `مواعيد اليوم (${filteredAppointments.length})`
+                : filterDate 
+                  ? `مواعيد ${format(filterDate, "dd/MM/yyyy")} (${filteredAppointments.length})`
+                  : `جميع المواعيد (${filteredAppointments.length})`
+              }
+            </span>
+          </CardTitle>
+          <CardDescription>
+            {showTodayOnly && !filterDate 
+              ? "المواعيد المحددة لليوم الحالي مرتبة من الأحدث للأقدم"
+              : "المواعيد مرتبة من الأحدث للأقدم"
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-4">جاري التحميل...</div>
-          ) : appointments.length === 0 ? (
+          ) : filteredAppointments.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا توجد مواعيد محجوزة حتى الآن</p>
+              <p className="text-muted-foreground">
+                {showTodayOnly && !filterDate 
+                  ? "لا توجد مواعيد لليوم" 
+                  : filterDate 
+                    ? "لا توجد مواعيد في التاريخ المحدد"
+                    : "لا توجد مواعيد محجوزة حتى الآن"
+                }
+              </p>
             </div>
           ) : (
             <Table>
@@ -333,7 +466,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {appointments.map((appointment) => (
+                {filteredAppointments.map((appointment) => (
                   <TableRow key={appointment.id}>
                     <TableCell className="font-medium">{appointment.patient_name}</TableCell>
                     <TableCell>{appointment.patient_phone}</TableCell>
