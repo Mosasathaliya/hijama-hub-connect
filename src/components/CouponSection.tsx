@@ -22,6 +22,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import type { Tables } from "@/integrations/supabase/types";
 
 const couponSchema = z.object({
   code: z.string().min(3, "كود الكوبون يجب أن يكون 3 أحرف على الأقل"),
@@ -33,18 +34,7 @@ const couponSchema = z.object({
 });
 
 type CouponFormData = z.infer<typeof couponSchema>;
-
-interface Coupon {
-  id: string;
-  code: string;
-  discount_type: "percentage" | "fixed";
-  discount_value: number;
-  max_uses: number;
-  used_count: number;
-  expiry_date: string;
-  is_active: boolean;
-  created_at: string;
-}
+type Coupon = Tables<"coupons">;
 
 interface CouponSectionProps {
   onBack?: () => void;
@@ -151,8 +141,8 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
     setEditingCoupon(coupon);
     form.reset({
       code: coupon.code,
-      discount_type: coupon.discount_type,
-      discount_value: coupon.discount_value,
+      discount_type: coupon.discount_type as "percentage" | "fixed",
+      discount_value: Number(coupon.discount_value),
       max_uses: coupon.max_uses,
       expiry_date: coupon.expiry_date,
       is_active: coupon.is_active
