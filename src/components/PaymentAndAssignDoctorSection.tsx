@@ -96,6 +96,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [editCupsCount, setEditCupsCount] = useState("");
   const [editDoctor, setEditDoctor] = useState("");
   const [editDiscount, setEditDiscount] = useState("");
+  const [editSelectedCoupon, setEditSelectedCoupon] = useState("");
   const [cupPrices, setCupPrices] = useState<any[]>([]);
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [finalPrice, setFinalPrice] = useState(0);
@@ -120,7 +121,29 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     if (editCupsCount && cupPrices.length > 0) {
       calculatePrice();
     }
-  }, [editCupsCount, editDiscount, cupPrices]);
+  }, [editCupsCount, editDiscount, editSelectedCoupon, cupPrices]);
+
+  // Calculate edit price with coupon discount
+  const calculateEditPriceWithCoupon = (basePrice: number) => {
+    if (!editSelectedCoupon) {
+      return Math.max(0, basePrice - (parseFloat(editDiscount) || 0));
+    }
+
+    const coupon = coupons.find(c => c.id === editSelectedCoupon);
+    if (!coupon) {
+      return Math.max(0, basePrice - (parseFloat(editDiscount) || 0));
+    }
+
+    let couponDiscountAmount = 0;
+    if (coupon.discount_type === "percentage") {
+      couponDiscountAmount = (basePrice * coupon.discount_value) / 100;
+    } else {
+      couponDiscountAmount = coupon.discount_value;
+    }
+
+    const totalDiscount = couponDiscountAmount + (parseFloat(editDiscount) || 0);
+    return Math.max(0, basePrice - totalDiscount);
+  };
 
   const fetchCupPrices = async () => {
     try {
@@ -139,7 +162,6 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const calculatePrice = () => {
     const cupsCount = parseInt(editCupsCount);
-    const discount = parseFloat(editDiscount) || 0;
     
     if (!cupsCount || cupPrices.length === 0) {
       setCalculatedPrice(0);
@@ -163,7 +185,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     }
 
     const basePrice = selectedPrice ? Number(selectedPrice.price) : 0;
-    const finalAmount = Math.max(0, basePrice - discount);
+    const finalAmount = calculateEditPriceWithCoupon(basePrice);
     
     setCalculatedPrice(basePrice);
     setFinalPrice(finalAmount);
@@ -341,6 +363,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     setEditCupsCount(payment.hijama_points_count.toString());
     setEditDoctor(payment.doctor_id);
     setEditDiscount("0");
+    setEditSelectedCoupon("");
     setCalculatedPrice(payment.amount);
     setFinalPrice(payment.amount);
     setShowEditDialog(true);
@@ -350,6 +373,22 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     if (!editingPayment) return;
 
     try {
+      // If a coupon is selected, update its used count
+      if (editSelectedCoupon) {
+        const coupon = coupons.find(c => c.id === editSelectedCoupon);
+        if (coupon) {
+          const { error: couponError } = await supabase
+            .from("coupons")
+            .update({ used_count: coupon.used_count + 1 })
+            .eq("id", editSelectedCoupon);
+
+          if (couponError) {
+            console.error("Error updating coupon:", couponError);
+            // Don't throw error here as payment update should still proceed
+          }
+        }
+      }
+
       // Update payment amount and hijama points count
       const { error: paymentError } = await supabase
         .from("payments")
@@ -372,10 +411,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       if (patientError) throw patientError;
 
+      const couponText = editSelectedCoupon ? " مع كوبون خصم" : "";
       const discountText = parseFloat(editDiscount) > 0 ? ` (خصم ${editDiscount} ريال)` : "";
       toast({
         title: "تم تحديث البيانات",
-        description: `تم تحديث عدد الكؤوس إلى ${editCupsCount} والمبلغ إلى ${finalPrice} ريال${discountText}`,
+        description: `تم تحديث عدد الكؤوس إلى ${editCupsCount} والمبلغ إلى ${finalPrice} ريال${discountText}${couponText}`,
       });
 
       fetchTodayPayments();
@@ -840,6 +880,35 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                       max={calculatedPrice}
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">كوبون الخصم (اختياري)</label>
+                    <Select value={editSelectedCoupon} onValueChange={setEditSelectedCoupon}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر كوبون للخصم (اختياري)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">بدون كوبون</SelectItem>
+                        {coupons.map((coupon) => (
+                          <SelectItem key={coupon.id} value={coupon.id}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{coupon.referrer_name}</span>
+                              <span className="text-sm text-muted-foreground">
+                                خصم {coupon.discount_value}
+                                {coupon.discount_type === "percentage" ? "%" : " ريال"}
+                                {coupon.referral_percentage > 0 && ` - إحالة ${coupon.referral_percentage}%`}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {editSelectedCoupon && (
+                      <div className="text-sm text-green-600 bg-green-50 p-2 rounded-md">
+                        تم اختيار كوبون خصم صالح
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium">المبلغ النهائي</label>
@@ -847,9 +916,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                       <span className="text-lg font-bold text-primary">
                         {finalPrice} ريال
                       </span>
-                      {parseFloat(editDiscount) > 0 && (
+                      {(parseFloat(editDiscount) > 0 || editSelectedCoupon) && (
                         <span className="text-sm text-muted-foreground ml-2">
-                          (خصم {editDiscount} ريال)
+                          {parseFloat(editDiscount) > 0 && `(خصم يدوي ${editDiscount} ريال)`}
+                          {editSelectedCoupon && parseFloat(editDiscount) > 0 && " + "}
+                          {editSelectedCoupon && "(خصم كوبون)"}
                         </span>
                       )}
                     </div>
