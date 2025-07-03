@@ -120,6 +120,32 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
 
       if (error) throw error;
 
+      // For now, since existing payments don't have coupon_id, 
+      // we'll show payments from the date range and calculate commission
+      // In future, only payments with actual coupon_id will be shown
+      let paymentsToShow = payments || [];
+      
+      // If no payments found with coupon_id, show a message about tracking limitation
+      if (paymentsToShow.length === 0) {
+        // Check if there are any payments in the date range at all
+        const { data: allPayments } = await supabase
+          .from('payments')
+          .select(`
+            id,
+            amount,
+            paid_at,
+            coupon_id,
+            patient_forms!inner(patient_name)
+          `)
+          .eq('payment_status', 'completed')
+          .gte('paid_at', fromDate)
+          .lte('paid_at', toDate + 'T23:59:59');
+          
+        if ((allPayments || []).length > 0) {
+          toast.error('لم يتم العثور على مدفوعات تم ربطها بهذا الكوبون. سيتم تتبع الكوبونات في المدفوعات الجديدة فقط.');
+        }
+      }
+
       // Calculate commission (this is a simplified version)
       const commissionRate = selectedCouponData.referral_percentage / 100;
       const calculatedCommissions = (payments || []).map(payment => ({
