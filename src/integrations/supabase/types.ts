@@ -18,6 +18,7 @@ export type Database = {
           id: string
           is_active: boolean
           max_uses: number
+          referral_percentage: number
           referrer_name: string
           updated_at: string
           used_count: number
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
+          referral_percentage?: number
           referrer_name: string
           updated_at?: string
           used_count?: number
@@ -42,6 +44,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
+          referral_percentage?: number
           referrer_name?: string
           updated_at?: string
           used_count?: number

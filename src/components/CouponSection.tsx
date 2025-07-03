@@ -28,6 +28,7 @@ const couponSchema = z.object({
   referrer_name: z.string().min(2, "اسم الشخص المرسل مطلوب"),
   discount_type: z.enum(["percentage", "fixed"], { required_error: "نوع الخصم مطلوب" }),
   discount_value: z.number().min(0.01, "قيمة الخصم يجب أن تكون أكثر من 0"),
+  referral_percentage: z.number().min(0, "نسبة الإحالة يجب أن تكون 0 أو أكثر").max(100, "نسبة الإحالة لا يمكن أن تتجاوز 100%"),
   max_uses: z.number().min(1, "عدد الاستخدامات يجب أن يكون 1 على الأقل"),
   expiry_date: z.string().min(1, "تاريخ الانتهاء مطلوب"),
   is_active: z.boolean().default(true)
@@ -91,6 +92,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
             referrer_name: data.referrer_name,
             discount_type: data.discount_type,
             discount_value: data.discount_value,
+            referral_percentage: data.referral_percentage,
             max_uses: data.max_uses,
             expiry_date: data.expiry_date,
             is_active: data.is_active
@@ -111,6 +113,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
             referrer_name: data.referrer_name,
             discount_type: data.discount_type,
             discount_value: data.discount_value,
+            referral_percentage: data.referral_percentage,
             max_uses: data.max_uses,
             expiry_date: data.expiry_date,
             is_active: data.is_active,
@@ -143,6 +146,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
       referrer_name: coupon.referrer_name,
       discount_type: coupon.discount_type as "percentage" | "fixed",
       discount_value: Number(coupon.discount_value),
+      referral_percentage: Number(coupon.referral_percentage),
       max_uses: coupon.max_uses,
       expiry_date: coupon.expiry_date,
       is_active: coupon.is_active
@@ -268,6 +272,7 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
                   <TableHead>اسم الشخص المرسل</TableHead>
                   <TableHead>نوع الخصم</TableHead>
                   <TableHead>قيمة الخصم</TableHead>
+                  <TableHead>نسبة الإحالة</TableHead>
                   <TableHead>الاستخدامات</TableHead>
                   <TableHead>تاريخ الانتهاء</TableHead>
                   <TableHead>الحالة</TableHead>
@@ -288,6 +293,11 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
                     <TableCell>
                       <span className="font-medium">
                         {getDiscountDisplay(coupon)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-primary">
+                        {coupon.referral_percentage}%
                       </span>
                     </TableCell>
                     <TableCell>
@@ -392,6 +402,22 @@ const CouponSection = ({ onBack }: CouponSectionProps) => {
               />
               {form.formState.errors.discount_value && (
                 <p className="text-sm text-destructive">{form.formState.errors.discount_value.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="referral_percentage">نسبة الإحالة (%) *</Label>
+              <Input
+                id="referral_percentage"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                {...form.register("referral_percentage", { valueAsNumber: true })}
+                placeholder="مثال: 5"
+              />
+              {form.formState.errors.referral_percentage && (
+                <p className="text-sm text-destructive">{form.formState.errors.referral_percentage.message}</p>
               )}
             </div>
 
