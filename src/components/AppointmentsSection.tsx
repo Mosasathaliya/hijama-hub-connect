@@ -51,6 +51,28 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
   useEffect(() => {
     fetchAppointments();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_forms',
+          filter: 'preferred_appointment_date=not.is.null'
+        },
+        () => {
+          console.log('Appointment data changed, refetching...');
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
