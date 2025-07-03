@@ -35,6 +35,9 @@ const AVAILABLE_PERMISSIONS = [
   { key: "إضافة طبيب جديد", label: "إضافة طبيب جديد" },
   { key: "النماذج", label: "النماذج" },
   { key: "أسعار كؤوس الحجامة", label: "أسعار كؤوس الحجامة" },
+  { key: "الفواتير", label: "الفواتير" },
+  { key: "كوبون", label: "كوبون" },
+  { key: "عمولة الإحالة", label: "عمولة الإحالة" },
 ];
 
 const UserManagementSection = ({ onBack }: UserManagementSectionProps) => {
