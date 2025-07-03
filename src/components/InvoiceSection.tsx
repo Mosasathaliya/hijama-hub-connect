@@ -383,27 +383,11 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
         </Card>
 
         {/* Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-primary">عدد الفواتير</CardTitle>
               <div className="text-3xl font-bold text-accent">{invoices.length}</div>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-primary">إجمالي المبيعات</CardTitle>
-              <div className="text-3xl font-bold text-accent">
-                {invoices.reduce((sum, inv) => sum + inv.total_amount, 0).toFixed(2)} ر.س
-              </div>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-primary">إجمالي الضريبة</CardTitle>
-              <div className="text-3xl font-bold text-accent">
-                {invoices.reduce((sum, inv) => sum + inv.vat_amount, 0).toFixed(2)} ر.س
-              </div>
             </CardHeader>
           </Card>
         </div>
