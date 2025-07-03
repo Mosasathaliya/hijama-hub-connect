@@ -177,12 +177,6 @@ const Dashboard = () => {
       color: "bg-emerald-500",
     },
     {
-      title: "الفواتير والحسابات",
-      description: "النظام المحاسبي",
-      icon: Receipt,
-      color: "bg-red-500",
-    },
-    {
       title: "النماذج",
       description: "النماذج والاستمارات",
       icon: FileText,
