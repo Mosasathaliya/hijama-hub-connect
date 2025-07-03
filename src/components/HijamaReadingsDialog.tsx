@@ -342,18 +342,20 @@ const HijamaReadingsDialog = ({
         </div>
       </DialogContent>
       
-      {/* Payment Dialog */}
-      <PaymentDialog
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        patientName={patientName}
-        patientPhone={patientPhone}
-        appointmentDate={appointmentDate}
-        appointmentTime={appointmentTime}
-        treatmentConditions={treatmentConditions}
-        hijamaPointsCount={hijamaPoints.length}
-        calculatedPrice={calculatedPrice}
-      />
+      {/* Payment Dialog - separate from main dialog to avoid nesting issues */}
+      {showPayment && (
+        <PaymentDialog
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          patientName={patientName}
+          patientPhone={patientPhone}
+          appointmentDate={appointmentDate}
+          appointmentTime={appointmentTime}
+          treatmentConditions={treatmentConditions}
+          hijamaPointsCount={hijamaPoints.length}
+          calculatedPrice={calculatedPrice}
+        />
+      )}
     </Dialog>
   );
 };
