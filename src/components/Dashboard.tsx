@@ -28,6 +28,7 @@ import ManagementSection from "@/components/ManagementSection";
 import UserManagementSection from "@/components/UserManagementSection";
 import InvoiceSection from "@/components/InvoiceSection";
 import CouponSection from "@/components/CouponSection";
+import ReferralCommissionSection from "@/components/ReferralCommissionSection";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -121,7 +122,7 @@ const Dashboard = () => {
   }
 
   if (activeSection === "عمولة الإحالة") {
-    return <div className="p-8"><h2 className="text-2xl font-bold">عمولة الإحالة</h2><p>قريباً...</p><button onClick={() => setActiveSection(null)}>العودة</button></div>;
+    return <ReferralCommissionSection onBack={() => setActiveSection(null)} />;
   }
 
   const menuItems = [
