@@ -27,12 +27,42 @@ import PatientHistorySection from "@/components/PatientHistorySection";
 import ManagementSection from "@/components/ManagementSection";
 import UserManagementSection from "@/components/UserManagementSection";
 import InvoiceSection from "@/components/InvoiceSection";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
-  const { logout, userPermissions } = useAuth();
+  const { logout, userPermissions, currentUser } = useAuth();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Real-time subscription for user permissions changes
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase
+      .channel('user-permissions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_permissions',
+          filter: `user_id=eq.${currentUser.id}`
+        },
+        () => {
+          // Force refresh the component when permissions change
+          setRefreshKey(prev => prev + 1);
+          // Force a page reload to refresh permissions
+          window.location.reload();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id]);
 
   if (activeSection === "الإدارة") {
     return <ManagementSection onBack={() => setActiveSection(null)} />;
