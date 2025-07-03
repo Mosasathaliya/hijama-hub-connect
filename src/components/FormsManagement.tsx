@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const patientFormSchema = z.object({
   patient_name: z.string().min(2, "الاسم مطلوب"),
   age: z.number().min(1, "العمر مطلوب").max(120, "عمر غير صحيح"),
+  patient_phone: z.string().min(8, "رقم الهاتف مطلوب"),
   id_number: z.string().min(10, "رقم الهوية مطلوب"),
   appointment_date: z.date({ required_error: "تاريخ الموعد مطلوب" }),
   appointment_time: z.string().min(1, "وقت الموعد مطلوب"),
@@ -42,7 +43,7 @@ const FormsManagement = ({ onBack }: FormsManagementProps) => {
     try {
       const formData = {
         patient_name: data.patient_name,
-        patient_phone: data.id_number, // Using id_number field for phone
+        patient_phone: data.patient_phone,
         patient_email: null,
         date_of_birth: new Date(new Date().getFullYear() - data.age, 0, 1).toISOString().split('T')[0],
         medical_history: null,
@@ -137,6 +138,18 @@ const FormsManagement = ({ onBack }: FormsManagementProps) => {
                 />
                 {form.formState.errors.age && (
                   <p className="text-sm text-destructive">{form.formState.errors.age.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="patient_phone">رقم الهاتف *</Label>
+                <Input
+                  id="patient_phone"
+                  {...form.register("patient_phone")}
+                  placeholder="05xxxxxxxx"
+                />
+                {form.formState.errors.patient_phone && (
+                  <p className="text-sm text-destructive">{form.formState.errors.patient_phone.message}</p>
                 )}
               </div>
 
