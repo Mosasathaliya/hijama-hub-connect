@@ -315,6 +315,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const fetchCoupons = async () => {
     try {
+      console.log("Fetching coupons...");
       const { data, error } = await supabase
         .from("coupons")
         .select("*")
@@ -323,6 +324,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         .order("referrer_name", { ascending: true });
 
       if (error) throw error;
+      console.log("Fetched coupons:", data);
       setCoupons(data || []);
     } catch (error) {
       console.error("Error fetching coupons:", error);
@@ -359,6 +361,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   };
 
   const handleEditPayment = (payment: TodayPayment) => {
+    console.log("Opening edit dialog, coupons available:", coupons.length);
     setEditingPayment(payment);
     setEditCupsCount(payment.hijama_points_count.toString());
     setEditDoctor(payment.doctor_id);
