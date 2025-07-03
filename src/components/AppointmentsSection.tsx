@@ -82,10 +82,14 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const filterAppointments = () => {
     let filtered = [...appointments];
     
+    const today = format(new Date(), 'yyyy-MM-dd');
+    console.log('Today\'s date:', today);
+    console.log('All appointments:', appointments.map(apt => ({ name: apt.patient_name, date: apt.preferred_appointment_date })));
+    
     if (showTodayOnly && !filterDate) {
       // Show only today's appointments
-      const today = format(new Date(), 'yyyy-MM-dd');
       filtered = filtered.filter(apt => apt.preferred_appointment_date === today);
+      console.log('Today\'s appointments after filter:', filtered.map(apt => ({ name: apt.patient_name, date: apt.preferred_appointment_date })));
     } else if (filterDate) {
       // Show appointments for the selected date
       const selectedDate = format(filterDate, 'yyyy-MM-dd');
