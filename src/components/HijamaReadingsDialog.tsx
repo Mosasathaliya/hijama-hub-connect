@@ -148,23 +148,6 @@ const HijamaReadingsDialog = ({
       });
 
       setIsOpen(false);
-      
-      // Navigate to payment and assign doctor section
-      if (onNavigateToPayment) {
-        onNavigateToPayment({
-          patientId,
-          patientName,
-          patientPhone,
-          appointmentDate,
-          appointmentTime,
-          treatmentConditions,
-          hijamaPointsCount: hijamaPoints.length,
-          calculatedPrice
-        });
-      } else {
-        // Fallback to payment dialog if no navigation function
-        setShowPayment(true);
-      }
     } catch (error) {
       console.error("Error saving readings:", error);
       toast({
@@ -337,7 +320,7 @@ const HijamaReadingsDialog = ({
             إلغاء
           </Button>
           <Button variant="healing" onClick={saveReadings}>
-            حفظ القراءات والانتقال للدفع
+            حفظ القراءات
           </Button>
         </div>
       </DialogContent>
