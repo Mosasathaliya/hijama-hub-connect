@@ -126,12 +126,12 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         {
           event: '*',
           schema: 'public',
-          table: 'patient_forms',
-          filter: 'status=eq.payment_pending'
+          table: 'patient_forms'
         },
         (payload) => {
           console.log('Patient form updated:', payload);
-          fetchPendingPayments();
+          // Refresh pending payments when any patient form changes
+          setTimeout(() => fetchPendingPayments(), 100);
         }
       )
       .on(
@@ -143,7 +143,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         },
         (payload) => {
           console.log('Hijama reading updated:', payload);
-          fetchPendingPayments();
+          // Refresh pending payments when hijama readings change
+          setTimeout(() => fetchPendingPayments(), 100);
         }
       )
       .on(
@@ -151,17 +152,23 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         {
           event: '*',
           schema: 'public',
-          table: 'payments',
-          filter: 'payment_status=eq.completed'
+          table: 'payments'
         },
         (payload) => {
           console.log('Payment updated:', payload);
-          fetchTodayPayments();
+          // Refresh both lists when payments change
+          setTimeout(() => {
+            fetchPendingPayments();
+            fetchTodayPayments();
+          }, 100);
         }
       )
       .subscribe();
 
+    console.log('Real-time subscription setup complete');
+
     return () => {
+      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, []);
