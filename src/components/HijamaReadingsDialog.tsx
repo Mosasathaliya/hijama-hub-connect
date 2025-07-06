@@ -121,6 +121,11 @@ const HijamaReadingsDialog = ({
 
   const saveReadings = async () => {
     try {
+      console.log("Starting to save readings...");
+      console.log("Patient ID:", patientId);
+      console.log("Hijama points count:", hijamaPoints.length);
+      console.log("Calculated price:", calculatedPrice);
+
       // Save hijama readings to database
       const { error: readingsError } = await supabase
         .from("hijama_readings")
@@ -132,19 +137,33 @@ const HijamaReadingsDialog = ({
           hijama_points: JSON.parse(JSON.stringify(hijamaPoints))
         });
 
-      if (readingsError) throw readingsError;
+      if (readingsError) {
+        console.error("Error saving hijama readings:", readingsError);
+        throw readingsError;
+      }
+
+      console.log("Hijama readings saved successfully");
 
       // Create payment record with calculated price and hijama points count
-      const { error: paymentError } = await supabase
-        .from("payments")
-        .insert({
-          patient_form_id: patientId,
-          amount: calculatedPrice,
-          hijama_points_count: hijamaPoints.length,
-          payment_status: "pending"
-        });
+      console.log("Creating payment record...");
+      const paymentData = {
+        patient_form_id: patientId,
+        amount: calculatedPrice,
+        hijama_points_count: hijamaPoints.length,
+        payment_status: "pending"
+      };
+      console.log("Payment data:", paymentData);
 
-      if (paymentError) throw paymentError;
+      const { error: paymentError, data: paymentResult } = await supabase
+        .from("payments")
+        .insert(paymentData);
+
+      if (paymentError) {
+        console.error("Error creating payment record:", paymentError);
+        throw paymentError;
+      }
+
+      console.log("Payment record created successfully:", paymentResult);
 
       // Update patient status to payment_pending
       const { error: statusError } = await supabase
@@ -152,7 +171,12 @@ const HijamaReadingsDialog = ({
         .update({ status: "payment_pending" })
         .eq("id", patientId);
 
-      if (statusError) throw statusError;
+      if (statusError) {
+        console.error("Error updating patient status:", statusError);
+        throw statusError;
+      }
+
+      console.log("Patient status updated successfully");
 
       toast({
         title: "تم حفظ القراءات",
