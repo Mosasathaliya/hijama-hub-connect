@@ -233,14 +233,16 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
     setIsSearching(true);
     try {
+      // Search by name, phone, or check if query could be an ID
       const { data, error } = await supabase
         .from("patient_forms")
         .select("*")
-        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,id.eq.${query}`)
+        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,id.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
         .order("submitted_at", { ascending: false })
         .limit(10);
 
       if (error) throw error;
+      console.log("Search results:", data);
       setSearchResults(data || []);
     } catch (error) {
       console.error("Error searching customers:", error);
