@@ -58,7 +58,6 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Appointment[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -574,18 +573,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                 onChange={(e) => {
                   const query = e.target.value;
                   setSearchQuery(query);
-                  
-                  // Clear previous timeout
-                  if (searchTimeout) {
-                    clearTimeout(searchTimeout);
-                  }
-                  
-                  // Set new timeout for debounced search
-                  const newTimeout = setTimeout(() => {
-                    searchExistingCustomers(query);
-                  }, 300); // 300ms delay
-                  
-                  setSearchTimeout(newTimeout);
+                  searchExistingCustomers(query);
                 }}
                 className="pl-10"
               />
