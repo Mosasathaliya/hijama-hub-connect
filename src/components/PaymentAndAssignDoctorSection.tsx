@@ -117,6 +117,53 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     fetchDoctors();
     fetchCupPrices();
     fetchCoupons();
+
+    // Set up real-time subscription for patient forms updates
+    const channel = supabase
+      .channel('payment-section-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_forms',
+          filter: 'status=eq.payment_pending'
+        },
+        (payload) => {
+          console.log('Patient form updated:', payload);
+          fetchPendingPayments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'hijama_readings'
+        },
+        (payload) => {
+          console.log('Hijama reading updated:', payload);
+          fetchPendingPayments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments',
+          filter: 'payment_status=eq.completed'
+        },
+        (payload) => {
+          console.log('Payment updated:', payload);
+          fetchTodayPayments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Debug effect to log coupons state changes
