@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { 
@@ -58,6 +59,11 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Appointment[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Appointment | null>(null);
+  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined);
+  const [appointmentTime, setAppointmentTime] = useState("");
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -233,11 +239,11 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
     setIsSearching(true);
     try {
-      // Search by name, phone, or check if query could be an ID
+      // Search by name, phone, chief_complaint, or cast ID to text for partial matches
       const { data, error } = await supabase
         .from("patient_forms")
         .select("*")
-        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,id.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
+        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,id::text.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
         .order("submitted_at", { ascending: false })
         .limit(10);
 
@@ -256,30 +262,51 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
     }
   };
 
-  const createAppointmentForExistingCustomer = async (customer: Appointment) => {
+  const openAppointmentDialog = (customer: Appointment) => {
+    setSelectedCustomer(customer);
+    setChiefComplaint(customer.chief_complaint);
+    setAppointmentDate(undefined);
+    setAppointmentTime("");
+    setShowAppointmentDialog(true);
+  };
+
+  const createScheduledAppointment = async () => {
+    if (!selectedCustomer || !appointmentDate || !appointmentTime || !chiefComplaint.trim()) {
+      toast({
+        title: "بيانات ناقصة",
+        description: "يرجى تعبئة جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("patient_forms")
         .insert({
-          patient_name: customer.patient_name,
-          patient_phone: customer.patient_phone,
-          patient_email: customer.patient_email,
-          chief_complaint: "موعد جديد - يرجى تحديد الشكوى الرئيسية",
-          medical_history: customer.medical_history,
-          allergies: customer.allergies,
-          current_medications: customer.current_medications,
-          additional_notes: customer.additional_notes,
-          status: "pending"
+          patient_name: selectedCustomer.patient_name,
+          patient_phone: selectedCustomer.patient_phone,
+          patient_email: selectedCustomer.patient_email,
+          chief_complaint: chiefComplaint,
+          medical_history: selectedCustomer.medical_history,
+          allergies: selectedCustomer.allergies,
+          current_medications: selectedCustomer.current_medications,
+          additional_notes: selectedCustomer.additional_notes,
+          preferred_appointment_date: format(appointmentDate, 'yyyy-MM-dd'),
+          preferred_appointment_time: appointmentTime,
+          status: "scheduled"
         });
 
       if (error) throw error;
 
       toast({
         title: "تم إنشاء الموعد",
-        description: `تم إنشاء موعد جديد للمريض ${customer.patient_name}`,
+        description: `تم إنشاء موعد جديد للمريض ${selectedCustomer.patient_name} في ${format(appointmentDate, 'dd/MM/yyyy')} الساعة ${appointmentTime}`,
       });
 
       fetchAppointments();
+      setShowAppointmentDialog(false);
+      setSelectedCustomer(null);
       setSearchQuery("");
       setSearchResults([]);
     } catch (error) {
@@ -610,7 +637,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                         <Button
                           size="sm"
                           variant="healing"
-                          onClick={() => createAppointmentForExistingCustomer(customer)}
+                          onClick={() => openAppointmentDialog(customer)}
                           className="flex items-center gap-1"
                         >
                           <Calendar className="w-3 h-3" />
@@ -729,6 +756,91 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Appointment Scheduling Dialog */}
+      <Dialog open={showAppointmentDialog} onOpenChange={setShowAppointmentDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">حجز موعد جديد</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedCustomer && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">العميل:</p>
+                <div className="flex items-center gap-2 p-2 bg-muted rounded">
+                  <User className="w-4 h-4" />
+                  <span className="font-medium">{selectedCustomer.patient_name}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">تاريخ الموعد *</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !appointmentDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {appointmentDate ? format(appointmentDate, "dd/MM/yyyy") : "اختر التاريخ"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={appointmentDate}
+                    onSelect={setAppointmentDate}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">وقت الموعد *</label>
+              <Input
+                type="time"
+                value={appointmentTime}
+                onChange={(e) => setAppointmentTime(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">الشكوى الرئيسية *</label>
+              <Textarea
+                placeholder="اكتب الشكوى الرئيسية..."
+                value={chiefComplaint}
+                onChange={(e) => setChiefComplaint(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={() => setShowAppointmentDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={createScheduledAppointment}
+                variant="healing"
+                className="flex-1"
+                disabled={!appointmentDate || !appointmentTime || !chiefComplaint.trim()}
+              >
+                حجز الموعد
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
