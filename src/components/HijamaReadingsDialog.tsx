@@ -134,6 +134,18 @@ const HijamaReadingsDialog = ({
 
       if (readingsError) throw readingsError;
 
+      // Create payment record with calculated price and hijama points count
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          patient_form_id: patientId,
+          amount: calculatedPrice,
+          hijama_points_count: hijamaPoints.length,
+          payment_status: "pending"
+        });
+
+      if (paymentError) throw paymentError;
+
       // Update patient status to payment_pending
       const { error: statusError } = await supabase
         .from("patient_forms")

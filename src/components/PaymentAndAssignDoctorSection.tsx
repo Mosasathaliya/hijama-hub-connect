@@ -42,6 +42,9 @@ interface Patient {
     weight?: number;
     created_at: string;
   }[];
+  payment_id?: string;
+  hijama_points_count?: number;
+  calculated_price?: number;
 }
 
 interface Doctor {
@@ -342,26 +345,52 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const fetchPendingPayments = async () => {
     try {
-      console.log("Fetching pending payments with hijama readings...");
+      console.log("Fetching pending payments from payments table...");
       const { data, error } = await supabase
-        .from("patient_forms")
+        .from("payments")
         .select(`
           *,
-          hijama_readings(
-            hijama_points,
-            blood_pressure_systolic,
-            blood_pressure_diastolic,
-            weight,
-            created_at
+          patient_forms (
+            id,
+            patient_name,
+            patient_phone,
+            preferred_appointment_date,
+            preferred_appointment_time,
+            chief_complaint,
+            treatment_conditions (
+              condition_name,
+              is_checked
+            )
           )
         `)
-        .eq("status", "payment_pending")
-        .order("preferred_appointment_date", { ascending: true });
+        .eq("payment_status", "pending")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
+
       console.log("Fetched pending payments:", data);
-      setPendingPayments(data || []);
+      
+      const formattedData = data?.map(payment => ({
+        id: payment.patient_forms.id,
+        patient_name: payment.patient_forms.patient_name,
+        patient_phone: payment.patient_forms.patient_phone,
+        preferred_appointment_date: payment.patient_forms.preferred_appointment_date,
+        preferred_appointment_time: payment.patient_forms.preferred_appointment_time,
+        chief_complaint: payment.patient_forms.chief_complaint,
+        status: "payment_pending",
+        submitted_at: payment.created_at,
+        medical_history: "",
+        additional_notes: "",
+        hijama_readings: [{
+          hijama_points: [],
+          created_at: payment.created_at
+        }],
+        payment_id: payment.id,
+        hijama_points_count: payment.hijama_points_count,
+        calculated_price: payment.amount
+      })) || [];
+
+      setPendingPayments(formattedData);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
       toast({
@@ -758,8 +787,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
               </TableHeader>
               <TableBody>
                 {pendingPayments.map((patient) => {
-                  const pointsCount = getHijamaPointsCount(patient);
-                  const expectedPrice = calculatePriceForPatient(patient);
+                  const pointsCount = patient.hijama_points_count || 0;
+                  const expectedPrice = patient.calculated_price || 0;
                   
                   return (
                     <TableRow key={patient.id}>
