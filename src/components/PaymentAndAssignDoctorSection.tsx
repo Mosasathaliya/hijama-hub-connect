@@ -601,6 +601,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     }
 
     try {
+      console.log("Processing payment for patient:", selectedPatient.id);
+      console.log("Selected doctor:", selectedDoctor);
+      console.log("Payment amount:", paymentAmount);
+      console.log("Selected patient payment_id:", selectedPatient.payment_id);
+
       // Update patient status and assign doctor
       const { error: updateError } = await supabase
         .from("patient_forms")
@@ -610,7 +615,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         })
         .eq("id", selectedPatient.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Error updating patient status:", updateError);
+        throw updateError;
+      }
 
       // If a coupon is selected, update its used count
       if (selectedCoupon) {
@@ -628,23 +636,31 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         }
       }
 
-      // Create payment record with discounted amount
-      const hijamaPointsCount = getHijamaPointsCount(selectedPatient);
+      // Update existing payment record instead of creating new one
+      const finalAmount = paymentData ? paymentAmount : (selectedPatient.calculated_price || 0);
+      const pointsCount = selectedPatient.hijama_points_count || 0;
+      
+      console.log("Updating payment with ID:", selectedPatient.payment_id);
+      console.log("Final amount:", finalAmount);
+      console.log("Points count:", pointsCount);
+
       const { error: paymentError } = await supabase
         .from("payments")
-        .insert({
-          patient_form_id: selectedPatient.id,
+        .update({
           doctor_id: selectedDoctor,
-          amount: paymentAmount,
-          hijama_points_count: hijamaPointsCount,
+          amount: finalAmount,
           payment_status: "completed",
           payment_method: "cash", // Default to cash, could be made selectable
           paid_at: new Date().toISOString(),
           coupon_id: selectedCoupon || null,
           is_taxable: isTaxable
-        });
+        })
+        .eq("id", selectedPatient.payment_id);
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        console.error("Error updating payment:", paymentError);
+        throw paymentError;
+      }
 
       toast({
         title: "تم الدفع وتعيين الطبيب",
