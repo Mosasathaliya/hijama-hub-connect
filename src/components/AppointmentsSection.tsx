@@ -19,7 +19,9 @@ import {
   Filter,
   CalendarIcon,
   UserPlus,
-  ExternalLink
+  ExternalLink,
+  Search,
+  UserCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +39,9 @@ interface Appointment {
   submitted_at: string;
   medical_history?: string;
   additional_notes?: string;
+  patient_email?: string;
+  allergies?: string;
+  current_medications?: string;
 }
 
 interface AppointmentsSectionProps {
@@ -50,6 +55,9 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [showTodayOnly, setShowTodayOnly] = useState(false); // Changed to false to show all appointments by default
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Appointment[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -215,6 +223,71 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
     );
 
     return { todayAppointments, upcomingAppointments, pastAppointments };
+  };
+
+  const searchExistingCustomers = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from("patient_forms")
+        .select("*")
+        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,id.eq.${query}`)
+        .order("submitted_at", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error("Error searching customers:", error);
+      toast({
+        title: "خطأ في البحث",
+        description: "حدث خطأ أثناء البحث عن العملاء",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const createAppointmentForExistingCustomer = async (customer: Appointment) => {
+    try {
+      const { error } = await supabase
+        .from("patient_forms")
+        .insert({
+          patient_name: customer.patient_name,
+          patient_phone: customer.patient_phone,
+          patient_email: customer.patient_email,
+          chief_complaint: "موعد جديد - يرجى تحديد الشكوى الرئيسية",
+          medical_history: customer.medical_history,
+          allergies: customer.allergies,
+          current_medications: customer.current_medications,
+          additional_notes: customer.additional_notes,
+          status: "pending"
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "تم إنشاء الموعد",
+        description: `تم إنشاء موعد جديد للمريض ${customer.patient_name}`,
+      });
+
+      fetchAppointments();
+      setSearchQuery("");
+      setSearchResults([]);
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      toast({
+        title: "خطأ في إنشاء الموعد",
+        description: "حدث خطأ أثناء إنشاء الموعد",
+        variant: "destructive",
+      });
+    }
   };
 
   if (selectedAppointment) {
@@ -472,6 +545,85 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
               >
                 إزالة التصفية
               </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Existing Customer Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCheck className="w-5 h-5" />
+            إنشاء موعد للعملاء الحاليين
+          </CardTitle>
+          <CardDescription>
+            ابحث عن العميل باستخدام الاسم أو رقم الهاتف أو المعرف وأنشئ موعداً جديداً
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="ابحث بالاسم أو رقم الهاتف أو المعرف..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  searchExistingCustomers(e.target.value);
+                }}
+                className="pl-10"
+              />
+            </div>
+            
+            {isSearching && (
+              <div className="text-center py-2 text-muted-foreground">
+                جاري البحث...
+              </div>
+            )}
+            
+            {searchResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  العملاء الموجودون ({searchResults.length})
+                </p>
+                <div className="grid gap-2 max-h-60 overflow-y-auto">
+                  {searchResults.map((customer) => (
+                    <Card key={customer.id} className="p-3 border">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span className="font-medium">{customer.patient_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Phone className="w-3 h-3" />
+                            {customer.patient_phone}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            آخر زيارة: {format(new Date(customer.submitted_at), "dd/MM/yyyy")}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="healing"
+                          onClick={() => createAppointmentForExistingCustomer(customer)}
+                          className="flex items-center gap-1"
+                        >
+                          <Calendar className="w-3 h-3" />
+                          إنشاء موعد
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {searchQuery && !isSearching && searchResults.length === 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                لا توجد نتائج للبحث "{searchQuery}"
+              </div>
             )}
           </div>
         </CardContent>
