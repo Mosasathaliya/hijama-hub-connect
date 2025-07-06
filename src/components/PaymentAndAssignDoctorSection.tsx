@@ -643,6 +643,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       console.log("Updating payment with ID:", selectedPatient.payment_id);
       console.log("Final amount:", finalAmount);
       console.log("Points count:", pointsCount);
+      console.log("Selected coupon:", selectedCoupon);
 
       const { error: paymentError } = await supabase
         .from("payments")
@@ -652,7 +653,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           payment_status: "completed",
           payment_method: "cash", // Default to cash, could be made selectable
           paid_at: new Date().toISOString(),
-          coupon_id: selectedCoupon || null,
+          coupon_id: selectedCoupon && selectedCoupon !== "none" ? selectedCoupon : null,
           is_taxable: isTaxable
         })
         .eq("id", selectedPatient.payment_id);
