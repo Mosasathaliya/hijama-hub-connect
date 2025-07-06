@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,7 +17,9 @@ import {
   Eye,
   Stethoscope,
   Filter,
-  CalendarIcon
+  CalendarIcon,
+  UserPlus,
+  ExternalLink
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -320,9 +323,39 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
             <p className="text-muted-foreground">إدارة مواعيد المرضى</p>
           </div>
         </div>
-        <Button onClick={fetchAppointments} variant="outline">
-          تحديث
-        </Button>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="healing" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                عميل جديد
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-center">عميل جديد</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <p className="text-center text-muted-foreground">
+                  انقر على الرابط أدناه لفتح نموذج المريض الجديد
+                </p>
+                <div className="flex justify-center">
+                  <Button
+                    onClick={() => window.open('https://id-preview--39c13c12-3933-4066-a696-5ece93ec3a36.lovable.app/patient-form', '_blank')}
+                    className="flex items-center gap-2"
+                    variant="healing"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    فتح نموذج المريض
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button onClick={fetchAppointments} variant="outline">
+            تحديث
+          </Button>
+        </div>
       </div>
 
       {/* Today's Appointments */}
