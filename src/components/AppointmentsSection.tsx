@@ -58,6 +58,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Appointment[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -571,8 +572,20 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                 placeholder="ابحث بالاسم أو رقم الهاتف أو المعرف..."
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  searchExistingCustomers(e.target.value);
+                  const query = e.target.value;
+                  setSearchQuery(query);
+                  
+                  // Clear previous timeout
+                  if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                  }
+                  
+                  // Set new timeout for debounced search
+                  const newTimeout = setTimeout(() => {
+                    searchExistingCustomers(query);
+                  }, 300); // 300ms delay
+                  
+                  setSearchTimeout(newTimeout);
                 }}
                 className="pl-10"
               />
