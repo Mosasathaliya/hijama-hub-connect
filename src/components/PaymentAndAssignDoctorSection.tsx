@@ -35,6 +35,13 @@ interface Patient {
   submitted_at: string;
   medical_history?: string;
   additional_notes?: string;
+  hijama_readings?: {
+    hijama_points: any;
+    blood_pressure_systolic?: number;
+    blood_pressure_diastolic?: number;
+    weight?: number;
+    created_at: string;
+  }[];
 }
 
 interface Doctor {
@@ -335,13 +342,25 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const fetchPendingPayments = async () => {
     try {
+      console.log("Fetching pending payments with hijama readings...");
       const { data, error } = await supabase
         .from("patient_forms")
-        .select("*")
+        .select(`
+          *,
+          hijama_readings(
+            hijama_points,
+            blood_pressure_systolic,
+            blood_pressure_diastolic,
+            weight,
+            created_at
+          )
+        `)
         .eq("status", "payment_pending")
         .order("preferred_appointment_date", { ascending: true });
 
       if (error) throw error;
+      
+      console.log("Fetched pending payments:", data);
       setPendingPayments(data || []);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
@@ -503,6 +522,45 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     setShowAssignDialog(true);
   };
 
+  // Helper function to get hijama points count
+  const getHijamaPointsCount = (patient: Patient): number => {
+    if (!patient.hijama_readings || patient.hijama_readings.length === 0) {
+      return 0;
+    }
+    const latestReading = patient.hijama_readings[0];
+    const hijamaPoints = latestReading?.hijama_points;
+    
+    // Handle the case where hijama_points is stored as JSON
+    if (Array.isArray(hijamaPoints)) {
+      return hijamaPoints.length;
+    }
+    
+    return 0;
+  };
+
+  // Helper function to calculate price based on hijama points
+  const calculatePriceForPatient = (patient: Patient): number => {
+    const pointsCount = getHijamaPointsCount(patient);
+    if (pointsCount === 0 || cupPrices.length === 0) return 0;
+
+    // Find the appropriate price tier
+    let selectedPrice = cupPrices.find(price => price.number_of_cups === pointsCount);
+    
+    // If exact match not found, find the closest higher tier
+    if (!selectedPrice) {
+      selectedPrice = cupPrices
+        .filter(price => price.number_of_cups >= pointsCount)
+        .sort((a, b) => a.number_of_cups - b.number_of_cups)[0];
+    }
+    
+    // If still no match, use the highest tier
+    if (!selectedPrice && cupPrices.length > 0) {
+      selectedPrice = cupPrices[cupPrices.length - 1];
+    }
+
+    return selectedPrice ? Number(selectedPrice.price) : 0;
+  };
+
   const processPaymentAndAssignDoctor = async () => {
     if (!selectedPatient || !selectedDoctor) {
       toast({
@@ -542,13 +600,14 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       }
 
       // Create payment record with discounted amount
+      const hijamaPointsCount = getHijamaPointsCount(selectedPatient);
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           patient_form_id: selectedPatient.id,
           doctor_id: selectedDoctor,
           amount: paymentAmount,
-          hijama_points_count: paymentData?.hijamaPointsCount || 0,
+          hijama_points_count: hijamaPointsCount,
           payment_status: "completed",
           payment_method: "cash", // Default to cash, could be made selectable
           paid_at: new Date().toISOString(),
@@ -691,35 +750,59 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   <TableHead>رقم الهاتف</TableHead>
                   <TableHead>تاريخ الموعد</TableHead>
                   <TableHead>الوقت</TableHead>
+                  <TableHead>نقاط الحجامة</TableHead>
+                  <TableHead>المبلغ المتوقع</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingPayments.map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell className="font-medium">{patient.patient_name}</TableCell>
-                    <TableCell>{patient.patient_phone}</TableCell>
-                    <TableCell>{format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>{patient.preferred_appointment_time}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                        في انتظار الدفع
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="healing"
-                        size="sm"
-                        onClick={() => handlePayment(patient)}
-                        className="flex items-center gap-1"
-                      >
-                        <DollarSign className="w-3 h-3" />
-                        دفع وتعيين طبيب
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {pendingPayments.map((patient) => {
+                  const pointsCount = getHijamaPointsCount(patient);
+                  const expectedPrice = calculatePriceForPatient(patient);
+                  
+                  return (
+                    <TableRow key={patient.id}>
+                      <TableCell className="font-medium">{patient.patient_name}</TableCell>
+                      <TableCell>{patient.patient_phone}</TableCell>
+                      <TableCell>{format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{patient.preferred_appointment_time}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={pointsCount > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}
+                        >
+                          {pointsCount} نقطة
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="secondary" 
+                          className={expectedPrice > 0 ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"}
+                        >
+                          {expectedPrice} ريال
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                          في انتظار الدفع
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="healing"
+                          size="sm"
+                          onClick={() => handlePayment(patient)}
+                          className="flex items-center gap-1"
+                          disabled={pointsCount === 0}
+                        >
+                          <DollarSign className="w-3 h-3" />
+                          دفع وتعيين طبيب
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
