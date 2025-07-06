@@ -239,11 +239,11 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
     setIsSearching(true);
     try {
-      // Search by name, phone, chief_complaint, or cast ID to text for partial matches
+      // Search by name, phone, and chief_complaint
       const { data, error } = await supabase
         .from("patient_forms")
         .select("*")
-        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,id::text.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
+        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
         .order("submitted_at", { ascending: false })
         .limit(10);
 
