@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, UserPlus, Edit, Trash2, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,12 +41,19 @@ const AVAILABLE_PERMISSIONS = [
   { key: "عمولة الإحالة", label: "عمولة الإحالة" },
 ];
 
+const GENDER_ACCESS_OPTIONS = [
+  { key: "male", label: "الذكور فقط" },
+  { key: "female", label: "الإناث فقط" },
+  { key: "both", label: "الذكور والإناث" },
+];
+
 const UserManagementSection = ({ onBack }: UserManagementSectionProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUser, setNewUser] = useState({ username: "", access_code: "" });
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [selectedGenderAccess, setSelectedGenderAccess] = useState<string>("");
   const [userPermissions, setUserPermissions] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
 
@@ -115,9 +123,22 @@ const UserManagementSection = ({ onBack }: UserManagementSectionProps) => {
       return;
     }
 
-    // Add permissions
-    if (selectedPermissions.length > 0) {
-      const permissionsToInsert = selectedPermissions.map(permission => ({
+    // Add permissions and gender access
+    const allPermissions = [...selectedPermissions];
+    
+    // Add gender access permissions
+    if (selectedGenderAccess) {
+      if (selectedGenderAccess === "male") {
+        allPermissions.push("الوصول للذكور");
+      } else if (selectedGenderAccess === "female") {
+        allPermissions.push("الوصول للإناث");
+      } else if (selectedGenderAccess === "both") {
+        allPermissions.push("الوصول للذكور", "الوصول للإناث");
+      }
+    }
+
+    if (allPermissions.length > 0) {
+      const permissionsToInsert = allPermissions.map(permission => ({
         user_id: userData.id,
         permission_key: permission,
       }));
@@ -142,6 +163,7 @@ const UserManagementSection = ({ onBack }: UserManagementSectionProps) => {
 
     setNewUser({ username: "", access_code: "" });
     setSelectedPermissions([]);
+    setSelectedGenderAccess("");
     setShowAddForm(false);
     fetchUsers();
   };
@@ -240,6 +262,22 @@ const UserManagementSection = ({ onBack }: UserManagementSectionProps) => {
               </div>
 
               <div>
+                <Label htmlFor="gender_access">صلاحية الوصول للمرضى</Label>
+                <Select onValueChange={(value) => setSelectedGenderAccess(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر نوع الوصول للمرضى" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GENDER_ACCESS_OPTIONS.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label>الصلاحيات</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
                   {AVAILABLE_PERMISSIONS.map((permission) => (
@@ -269,6 +307,7 @@ const UserManagementSection = ({ onBack }: UserManagementSectionProps) => {
                   onClick={() => {
                     setShowAddForm(false);
                     setSelectedPermissions([]);
+                    setSelectedGenderAccess("");
                     setNewUser({ username: "", access_code: "" });
                   }}
                   className="flex items-center gap-2"
