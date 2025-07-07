@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 const patientFormSchema = z.object({
   patient_name: z.string().min(2, "الاسم مطلوب"),
   patient_phone: z.string().min(8, "رقم الهاتف مطلوب"),
+  id_number: z.string().min(10, "رقم الهوية مطلوب"),
   age: z.number().min(1, "العمر مطلوب").max(120, "عمر غير صحيح"),
   appointment_date: z.date({ required_error: "تاريخ الموعد المطلوب" }),
   appointment_time: z.string().min(1, "وقت الموعد مطلوب"),
@@ -46,7 +47,7 @@ const PatientForm = () => {
         medical_history: data.medical_notes || null,
         current_medications: null,
         allergies: null,
-        chief_complaint: `طلب موعد - العمر: ${data.age} سنة`,
+        chief_complaint: `طلب موعد - العمر: ${data.age} سنة، رقم الهوية: ${data.id_number}`,
         preferred_appointment_date: format(data.appointment_date, 'yyyy-MM-dd'),
         preferred_appointment_time: data.appointment_time,
         additional_notes: data.medical_notes || null,
@@ -135,6 +136,18 @@ const PatientForm = () => {
                   />
                   {form.formState.errors.patient_phone && (
                     <p className="text-sm text-destructive">{form.formState.errors.patient_phone.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="id_number">رقم الهوية *</Label>
+                  <Input
+                    id="id_number"
+                    {...form.register("id_number")}
+                    placeholder="أدخل رقم الهوية"
+                  />
+                  {form.formState.errors.id_number && (
+                    <p className="text-sm text-destructive">{form.formState.errors.id_number.message}</p>
                   )}
                 </div>
 
