@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import HijamaReadingsDialog from "./HijamaReadingsDialog";
 
@@ -31,6 +32,7 @@ interface Patient {
   submitted_at: string;
   medical_history?: string;
   additional_notes?: string;
+  gender?: string;
 }
 
 interface TreatmentCondition {
@@ -77,25 +79,65 @@ const TreatmentSection = ({ onBack, onNavigateToPayment }: TreatmentSectionProps
   const [treatmentConditions, setTreatmentConditions] = useState<{[patientId: string]: TreatmentCondition[]}>({});
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { userPermissions } = useAuth();
 
   useEffect(() => {
     fetchPatientsInTreatment();
-  }, []);
+  }, [userPermissions]);
 
   const fetchPatientsInTreatment = async () => {
     try {
-      const { data, error } = await supabase
-        .from("patient_forms")
-        .select("*")
-        .eq("status", "in_treatment")
-        .order("preferred_appointment_date", { ascending: true });
+      const hasAccessToMales = userPermissions.includes("الوصول للذكور");
+      const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
-      if (error) throw error;
-      setPatientsInTreatment(data || []);
+      let allPatientsInTreatment: Patient[] = [];
+
+      // Fetch male patients in treatment if user has access
+      if (hasAccessToMales) {
+        const { data: maleData, error: maleError } = await supabase
+          .from("male_patients")
+          .select("*")
+          .eq("status", "in_treatment")
+          .order("preferred_appointment_date", { ascending: true });
+
+        if (maleError) throw maleError;
+        
+        // Add gender field to identify the source
+        const malePatientsInTreatment = (maleData || []).map(patient => ({
+          ...patient,
+          gender: 'male'
+        }));
+        allPatientsInTreatment = [...allPatientsInTreatment, ...malePatientsInTreatment];
+      }
+
+      // Fetch female patients in treatment if user has access
+      if (hasAccessToFemales) {
+        const { data: femaleData, error: femaleError } = await supabase
+          .from("female_patients")
+          .select("*")
+          .eq("status", "in_treatment")
+          .order("preferred_appointment_date", { ascending: true });
+
+        if (femaleError) throw femaleError;
+        
+        // Add gender field to identify the source
+        const femalePatientsInTreatment = (femaleData || []).map(patient => ({
+          ...patient,
+          gender: 'female'
+        }));
+        allPatientsInTreatment = [...allPatientsInTreatment, ...femalePatientsInTreatment];
+      }
+
+      // Sort all patients by preferred_appointment_date
+      allPatientsInTreatment.sort((a, b) => 
+        new Date(a.preferred_appointment_date).getTime() - new Date(b.preferred_appointment_date).getTime()
+      );
+
+      setPatientsInTreatment(allPatientsInTreatment);
       
       // Fetch treatment conditions for all patients
-      if (data && data.length > 0) {
-        await fetchTreatmentConditions(data.map(p => p.id));
+      if (allPatientsInTreatment.length > 0) {
+        await fetchTreatmentConditions(allPatientsInTreatment.map(p => p.id));
       }
     } catch (error) {
       console.error("Error fetching patients in treatment:", error);
@@ -194,8 +236,13 @@ const TreatmentSection = ({ onBack, onNavigateToPayment }: TreatmentSectionProps
 
   const completePatientTreatment = async (patientId: string) => {
     try {
+      const patient = patientsInTreatment.find(p => p.id === patientId);
+      if (!patient) return;
+
+      const tableName = patient.gender === 'male' ? 'male_patients' : 'female_patients';
+      
       const { error } = await supabase
-        .from("patient_forms")
+        .from(tableName)
         .update({ status: "completed" })
         .eq("id", patientId);
 
