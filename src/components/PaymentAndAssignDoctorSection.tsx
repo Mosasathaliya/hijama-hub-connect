@@ -102,6 +102,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showPaymentMethodDialog, setShowPaymentMethodDialog] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [editingPayment, setEditingPayment] = useState<TodayPayment | null>(null);
   const [editCupsCount, setEditCupsCount] = useState("");
   const [editDoctor, setEditDoctor] = useState("");
@@ -484,6 +486,13 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
   const saveEditedPayment = async () => {
     if (!editingPayment) return;
+    
+    // Show payment method selection dialog first
+    setShowPaymentMethodDialog(true);
+  };
+
+  const confirmSaveEditPayment = async () => {
+    if (!editingPayment || !selectedPaymentMethod) return;
 
     try {
       // If a coupon is selected, update its used count
@@ -510,6 +519,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           hijama_points_count: parseInt(editCupsCount),
           doctor_id: editDoctor,
           is_taxable: editIsTaxable,
+          payment_method: selectedPaymentMethod, // Now save the selected payment method
           coupon_id: editSelectedCoupon && editSelectedCoupon !== "none" ? editSelectedCoupon : null
         })
         .eq("id", editingPayment.id);
@@ -535,7 +545,9 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       fetchTodayPayments();
       setShowEditDialog(false);
+      setShowPaymentMethodDialog(false);
       setEditingPayment(null);
+      setSelectedPaymentMethod("");
     } catch (error) {
       console.error("Error updating payment:", error);
       toast({
@@ -1209,6 +1221,71 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Method Selection Dialog */}
+      <Dialog open={showPaymentMethodDialog} onOpenChange={setShowPaymentMethodDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              اختر طريقة الدفع
+            </DialogTitle>
+            <DialogDescription className="text-right">
+              حدد طريقة الدفع المستخدمة
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Button
+              variant={selectedPaymentMethod === "card" ? "default" : "outline"}
+              onClick={() => setSelectedPaymentMethod("card")}
+              className="w-full flex items-center gap-2 justify-start"
+            >
+              <CreditCard className="w-4 h-4" />
+              البطاقة الائتمانية
+            </Button>
+            
+            <Button
+              variant={selectedPaymentMethod === "cash" ? "default" : "outline"}
+              onClick={() => setSelectedPaymentMethod("cash")}
+              className="w-full flex items-center gap-2 justify-start"
+            >
+              <CreditCard className="w-4 h-4" />
+              نقداً
+            </Button>
+            
+            <Button
+              variant={selectedPaymentMethod === "bank_transfer" ? "default" : "outline"}
+              onClick={() => setSelectedPaymentMethod("bank_transfer")}
+              className="w-full flex items-center gap-2 justify-start"
+            >
+              <CreditCard className="w-4 h-4" />
+              تحويل بنكي
+            </Button>
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowPaymentMethodDialog(false);
+                setSelectedPaymentMethod("");
+              }}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+            <Button 
+              variant="healing" 
+              onClick={confirmSaveEditPayment}
+              className="flex-1"
+              disabled={!selectedPaymentMethod}
+            >
+              تأكيد الحفظ
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
