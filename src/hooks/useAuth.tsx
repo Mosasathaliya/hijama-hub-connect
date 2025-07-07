@@ -79,6 +79,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const permissions = permissionsData?.map(p => p.permission_key) || [];
 
+      console.log("Auth Hook - User ID:", userData.id);
+      console.log("Auth Hook - Raw permissions data:", permissionsData);
+      console.log("Auth Hook - Processed permissions:", permissions);
+
       setIsLoggedIn(true);
       setCurrentUser(userData);
       setUserPermissions(permissions);

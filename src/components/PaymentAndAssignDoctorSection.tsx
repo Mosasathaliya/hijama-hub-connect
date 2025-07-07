@@ -122,6 +122,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { userPermissions } = useAuth();
 
   useEffect(() => {
     console.log("PaymentAndAssignDoctorSection mounted");
@@ -184,7 +185,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userPermissions]);
 
   // Debug effect to log coupons state changes
   useEffect(() => {
@@ -379,6 +380,20 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     try {
       console.log("Fetching pending payments from payments table...");
       
+      const hasAccessToMales = userPermissions.includes("الوصول للذكور");
+      const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
+
+      console.log("PaymentAndAssign - User permissions:", userPermissions);
+      console.log("PaymentAndAssign - Access to males:", hasAccessToMales);
+      console.log("PaymentAndAssign - Access to females:", hasAccessToFemales);
+      
+      // If user has no gender permissions, don't show any patients
+      if (!hasAccessToMales && !hasAccessToFemales) {
+        console.log("PaymentAndAssign - No gender permissions, showing no patients");
+        setPendingPayments([]);
+        return;
+      }
+      
       // Fetch pending payments
       const { data: paymentData, error } = await supabase
         .from("payments")
@@ -393,26 +408,42 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       if (error) throw error;
       console.log("Raw payment data:", paymentData);
 
-      // Fetch patients from both male and female tables
-      const [maleData, femaleData] = await Promise.all([
-        supabase
-          .from('male_patients')
-          .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
-          .eq('status', 'payment_pending'),
-        supabase
-          .from('female_patients')
-          .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
-          .eq('status', 'payment_pending')
-      ]);
-
-      const malePatients = maleData.data || [];
-      const femalePatients = femaleData.data || [];
-
-      // Combine all patients
-      const allPatients = [
-        ...malePatients.map(p => ({ ...p, gender: 'male', table: 'male_patients' })),
-        ...femalePatients.map(p => ({ ...p, gender: 'female', table: 'female_patients' }))
-      ];
+      // Fetch patients from gender-based tables based on permissions
+      const fetchPromises = [];
+      
+      if (hasAccessToMales) {
+        fetchPromises.push(
+          supabase
+            .from('male_patients')
+            .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
+            .eq('status', 'payment_pending')
+        );
+      }
+      
+      if (hasAccessToFemales) {
+        fetchPromises.push(
+          supabase
+            .from('female_patients')
+            .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
+            .eq('status', 'payment_pending')
+        );
+      }
+      
+      const results = await Promise.all(fetchPromises);
+      let allPatients = [];
+      
+      // Process male patients if they have access
+      if (hasAccessToMales && results[0]) {
+        const malePatients = results[0].data || [];
+        allPatients = [...allPatients, ...malePatients.map(p => ({ ...p, gender: 'male', table: 'male_patients' }))];
+      }
+      
+      // Process female patients (adjust index based on whether male data was fetched)
+      const femaleResultIndex = hasAccessToMales ? 1 : 0;
+      if (hasAccessToFemales && results[femaleResultIndex]) {
+        const femalePatients = results[femaleResultIndex].data || [];
+        allPatients = [...allPatients, ...femalePatients.map(p => ({ ...p, gender: 'female', table: 'female_patients' }))];
+      }
 
       console.log("All patients with payment_pending status:", allPatients);
 
