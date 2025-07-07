@@ -84,20 +84,12 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
       const endOfDay = new Date(end);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const { data, error } = await supabase
+      // Fetch payments
+      const { data: paymentData, error } = await supabase
         .from("payments")
         .select(`
-          id,
-          amount,
-          hijama_points_count,
-          paid_at,
-          payment_method,
-          payment_status,
-          patient_forms!inner(
-            patient_name,
-            patient_phone
-          ),
-          doctors!inner(
+          *,
+          doctors (
             name
           )
         `)
@@ -108,17 +100,49 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
 
       if (error) throw error;
 
-      const formattedPayments = data?.map(payment => ({
-        id: payment.id,
-        amount: payment.amount,
-        hijama_points_count: payment.hijama_points_count,
-        paid_at: payment.paid_at,
-        payment_method: payment.payment_method || "نقدي",
-        payment_status: payment.payment_status,
-        patient_name: payment.patient_forms.patient_name,
-        patient_phone: payment.patient_forms.patient_phone,
-        doctor_name: payment.doctors.name
-      })) || [];
+      // For each payment, fetch patient data from the appropriate table
+      const paymentsWithPatients = await Promise.all(
+        (paymentData || []).map(async (payment) => {
+          let patientData = null;
+          
+          if (payment.patient_table === 'male_patients') {
+            const { data } = await supabase
+              .from('male_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else if (payment.patient_table === 'female_patients') {
+            const { data } = await supabase
+              .from('female_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else {
+            const { data } = await supabase
+              .from('patient_forms')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          }
+
+          return {
+            id: payment.id,
+            amount: payment.amount,
+            hijama_points_count: payment.hijama_points_count,
+            paid_at: payment.paid_at,
+            payment_method: payment.payment_method || "نقدي",
+            payment_status: payment.payment_status,
+            patient_name: patientData?.patient_name || 'غير متوفر',
+            patient_phone: patientData?.patient_phone || 'غير متوفر',
+            doctor_name: payment.doctors?.name || 'غير محدد'
+          };
+        })
+      );
+
+      const formattedPayments = paymentsWithPatients || [];
 
       setPayments(formattedPayments);
     } catch (error) {

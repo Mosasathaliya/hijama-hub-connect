@@ -76,7 +76,7 @@ interface TodayPayment {
   amount: number;
   paid_at: string;
   hijama_points_count: number;
-  patient_form_id: string;
+  patient_id: string;
 }
 
 interface Coupon {
@@ -298,20 +298,12 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      const { data, error } = await supabase
+      // Fetch today's completed payments
+      const { data: todayPaymentData, error } = await supabase
         .from("payments")
         .select(`
-          id,
-          amount,
-          hijama_points_count,
-          paid_at,
-          patient_form_id,
-          doctor_id,
-          patient_forms!inner(
-            patient_name,
-            patient_phone
-          ),
-          doctors!inner(
+          *,
+          doctors (
             name
           )
         `)
@@ -322,16 +314,53 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       if (error) throw error;
 
-      const formattedPayments = data?.map(payment => ({
+      // For each payment, fetch patient data from the appropriate table
+      const todayPaymentsWithPatients = await Promise.all(
+        (todayPaymentData || []).map(async (payment) => {
+          let patientData = null;
+          
+          // Try different patient tables based on patient_table field
+          if (payment.patient_table === 'male_patients') {
+            const { data } = await supabase
+              .from('male_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else if (payment.patient_table === 'female_patients') {
+            const { data } = await supabase
+              .from('female_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else {
+            // Fallback to patient_forms
+            const { data } = await supabase
+              .from('patient_forms')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          }
+
+          return {
+            ...payment,
+            patient_data: patientData
+          };
+        })
+      );
+
+      const formattedPayments = todayPaymentsWithPatients?.map(payment => ({
         id: payment.id,
-        patient_name: payment.patient_forms.patient_name,
-        patient_phone: payment.patient_forms.patient_phone,
-        doctor_name: payment.doctors.name,
+        patient_name: payment.patient_data?.patient_name || 'غير متوفر',
+        patient_phone: payment.patient_data?.patient_phone || 'غير متوفر',
+        doctor_name: payment.doctors?.name || 'غير محدد',
         doctor_id: payment.doctor_id,
         amount: payment.amount,
         paid_at: payment.paid_at,
         hijama_points_count: payment.hijama_points_count,
-        patient_form_id: payment.patient_form_id
+        patient_id: payment.patient_id
       })) || [];
 
       setTodayPayments(formattedPayments);
@@ -348,51 +377,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const fetchPendingPayments = async () => {
     try {
       console.log("Fetching pending payments from payments table...");
-      const { data, error } = await supabase
-        .from("payments")
-        .select(`
-          *,
-          patient_forms (
-            id,
-            patient_name,
-            patient_phone,
-            preferred_appointment_date,
-            preferred_appointment_time,
-            chief_complaint,
-            treatment_conditions (
-              condition_name,
-              is_checked
-            )
-          )
-        `)
-        .eq("payment_status", "pending")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      console.log("Fetched pending payments:", data);
-      
-      const formattedData = data?.map(payment => ({
-        id: payment.patient_forms.id,
-        patient_name: payment.patient_forms.patient_name,
-        patient_phone: payment.patient_forms.patient_phone,
-        preferred_appointment_date: payment.patient_forms.preferred_appointment_date,
-        preferred_appointment_time: payment.patient_forms.preferred_appointment_time,
-        chief_complaint: payment.patient_forms.chief_complaint,
-        status: "payment_pending",
-        submitted_at: payment.created_at,
-        medical_history: "",
-        additional_notes: "",
-        hijama_readings: [{
-          hijama_points: [],
-          created_at: payment.created_at
-        }],
-        payment_id: payment.id,
-        hijama_points_count: payment.hijama_points_count,
-        calculated_price: payment.amount
-      })) || [];
-
-      setPendingPayments(formattedData);
+      // This section is now handled above in the new code
+      // Remove this duplicate code
     } catch (error) {
       console.error("Error fetching pending payments:", error);
       toast({
@@ -526,13 +512,34 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
 
       if (paymentError) throw paymentError;
 
-      // Update patient form doctor assignment
-      const { error: patientError } = await supabase
-        .from("patient_forms")
-        .update({
-          doctor_id: editDoctor
-        })
-        .eq("id", editingPayment.patient_form_id);
+      // Update patient in the appropriate table
+      const { data: paymentInfo } = await supabase
+        .from("payments")
+        .select('patient_table')
+        .eq("id", editingPayment.id)
+        .single();
+
+      // Update patient in the appropriate table
+      let patientError = null;
+      if (paymentInfo?.patient_table === 'male_patients') {
+        const { error } = await supabase
+          .from('male_patients')
+          .update({ doctor_id: editDoctor })
+          .eq("id", editingPayment.patient_id);
+        patientError = error;
+      } else if (paymentInfo?.patient_table === 'female_patients') {
+        const { error } = await supabase
+          .from('female_patients')
+          .update({ doctor_id: editDoctor })
+          .eq("id", editingPayment.patient_id);
+        patientError = error;
+      } else {
+        const { error } = await supabase
+          .from('patient_forms')
+          .update({ doctor_id: editDoctor })
+          .eq("id", editingPayment.patient_id);
+        patientError = error;
+      }
 
       if (patientError) throw patientError;
 
@@ -618,14 +625,34 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       console.log("Payment amount:", paymentAmount);
       console.log("Selected patient payment_id:", selectedPatient.payment_id);
 
+      // Get patient table info from payment
+      const { data: paymentInfo } = await supabase
+        .from("payments")
+        .select('patient_table')
+        .eq("id", selectedPatient.payment_id)
+        .single();
+
       // Update patient status and assign doctor
-      const { error: updateError } = await supabase
-        .from("patient_forms")
-        .update({ 
-          status: "paid_and_assigned",
-          doctor_id: selectedDoctor
-        })
-        .eq("id", selectedPatient.id);
+      let updateError = null;
+      if (paymentInfo?.patient_table === 'male_patients') {
+        const { error } = await supabase
+          .from('male_patients')
+          .update({ status: "paid_and_assigned", doctor_id: selectedDoctor })
+          .eq("id", selectedPatient.id);
+        updateError = error;
+      } else if (paymentInfo?.patient_table === 'female_patients') {
+        const { error } = await supabase
+          .from('female_patients')
+          .update({ status: "paid_and_assigned", doctor_id: selectedDoctor })
+          .eq("id", selectedPatient.id);
+        updateError = error;
+      } else {
+        const { error } = await supabase
+          .from('patient_forms')
+          .update({ status: "paid_and_assigned", doctor_id: selectedDoctor })
+          .eq("id", selectedPatient.id);
+        updateError = error;
+      }
 
       if (updateError) {
         console.error("Error updating patient status:", updateError);

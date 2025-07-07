@@ -365,7 +365,8 @@ export type Database = {
           id: string
           is_taxable: boolean
           paid_at: string | null
-          patient_form_id: string
+          patient_id: string
+          patient_table: string | null
           payment_method: string | null
           payment_status: string
           updated_at: string
@@ -379,7 +380,8 @@ export type Database = {
           id?: string
           is_taxable?: boolean
           paid_at?: string | null
-          patient_form_id: string
+          patient_id: string
+          patient_table?: string | null
           payment_method?: string | null
           payment_status?: string
           updated_at?: string
@@ -393,7 +395,8 @@ export type Database = {
           id?: string
           is_taxable?: boolean
           paid_at?: string | null
-          patient_form_id?: string
+          patient_id?: string
+          patient_table?: string | null
           payment_method?: string | null
           payment_status?: string
           updated_at?: string
@@ -411,13 +414,6 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_patient_form_id_fkey"
-            columns: ["patient_form_id"]
-            isOneToOne: false
-            referencedRelation: "patient_forms"
             referencedColumns: ["id"]
           },
         ]

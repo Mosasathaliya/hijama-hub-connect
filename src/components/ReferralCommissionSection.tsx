@@ -106,13 +106,7 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
       // Get only payments that used the selected coupon
       const { data: payments, error } = await supabase
         .from('payments')
-        .select(`
-          id,
-          amount,
-          paid_at,
-          coupon_id,
-          patient_forms!inner(patient_name)
-        `)
+        .select('*')
         .eq('payment_status', 'completed')
         .eq('coupon_id', selectedCoupon)
         .gte('paid_at', fromDate)
@@ -130,13 +124,7 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
         // Check if there are any payments in the date range at all
         const { data: allPayments } = await supabase
           .from('payments')
-          .select(`
-            id,
-            amount,
-            paid_at,
-            coupon_id,
-            patient_forms!inner(patient_name)
-          `)
+          .select('*')
           .eq('payment_status', 'completed')
           .gte('paid_at', fromDate)
           .lte('paid_at', toDate + 'T23:59:59');
@@ -146,11 +134,46 @@ const ReferralCommissionSection = ({ onBack }: ReferralCommissionSectionProps) =
         }
       }
 
+      // For each payment, fetch patient data from the appropriate table
+      const paymentsWithPatients = await Promise.all(
+        (payments || []).map(async (payment) => {
+          let patientData = null;
+          
+          if (payment.patient_table === 'male_patients') {
+            const { data } = await supabase
+              .from('male_patients')
+              .select('patient_name')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else if (payment.patient_table === 'female_patients') {
+            const { data } = await supabase
+              .from('female_patients')
+              .select('patient_name')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else {
+            const { data } = await supabase
+              .from('patient_forms')
+              .select('patient_name')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          }
+
+          return {
+            ...payment,
+            patient_name: patientData?.patient_name || 'غير محدد'
+          };
+        })
+      );
+
       // Calculate commission (this is a simplified version)
       const commissionRate = selectedCouponData.referral_percentage / 100;
-      const calculatedCommissions = (payments || []).map(payment => ({
+      const calculatedCommissions = paymentsWithPatients.map(payment => ({
         id: payment.id,
-        patient_name: payment.patient_forms?.patient_name || 'غير محدد',
+        patient_name: payment.patient_name,
         amount: payment.amount,
         commission_amount: payment.amount * commissionRate,
         date: payment.paid_at,

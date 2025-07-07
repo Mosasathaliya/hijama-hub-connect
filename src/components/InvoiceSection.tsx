@@ -150,18 +150,8 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
       const { data: paymentsData, error } = await supabase
         .from("payments")
         .select(`
-          id,
-          amount,
-          hijama_points_count,
-          paid_at,
-          payment_method,
-          payment_status,
-          is_taxable,
-          patient_forms!inner(
-            patient_name,
-            patient_phone
-          ),
-          doctors!inner(
+          *,
+          doctors (
             name
           )
         `)
@@ -172,8 +162,43 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
 
       if (error) throw error;
 
+      // For each payment, fetch patient data from the appropriate table
+      const paymentsWithPatients = await Promise.all(
+        (paymentsData || []).map(async (payment) => {
+          let patientData = null;
+          
+          if (payment.patient_table === 'male_patients') {
+            const { data } = await supabase
+              .from('male_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else if (payment.patient_table === 'female_patients') {
+            const { data } = await supabase
+              .from('female_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else {
+            const { data } = await supabase
+              .from('patient_forms')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          }
+
+          return {
+            ...payment,
+            patient_data: patientData
+          };
+        })
+      );
+
       // Convert payments to invoices
-      const invoicePromises = paymentsData?.map(async (payment) => {
+      const invoicePromises = paymentsWithPatients?.map(async (payment) => {
         const invoiceNumber = generateInvoiceNumber(payment.id, payment.paid_at);
         const isTaxable = payment.is_taxable || false;
         
@@ -197,9 +222,9 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
             paid_at: payment.paid_at,
             payment_method: payment.payment_method || "نقدي",
             payment_status: payment.payment_status,
-            patient_name: payment.patient_forms.patient_name,
-            patient_phone: payment.patient_forms.patient_phone,
-            doctor_name: payment.doctors.name,
+            patient_name: payment.patient_data?.patient_name || 'غير متوفر',
+            patient_phone: payment.patient_data?.patient_phone || 'غير متوفر',
+            doctor_name: payment.doctors?.name || 'غير محدد',
             is_taxable: isTaxable
           },
           issue_date: payment.paid_at,

@@ -108,7 +108,7 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
           const { data: payments } = await supabase
             .from("payments")
             .select("amount")
-            .eq("patient_form_id", patient.id)
+            .eq("patient_id", patient.id)
             .eq("payment_status", "completed");
 
           const totalPayments = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
@@ -164,7 +164,7 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
           payment_method,
           doctors(name)
         `)
-        .eq("patient_form_id", patient.id)
+        .eq("patient_id", patient.id)
         .eq("payment_status", "completed")
         .order("paid_at", { ascending: false });
 

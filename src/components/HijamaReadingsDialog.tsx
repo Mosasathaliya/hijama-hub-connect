@@ -156,7 +156,8 @@ const HijamaReadingsDialog = ({
       // Create payment record with calculated price and hijama points count
       console.log("Creating payment record...");
       const paymentData = {
-        patient_form_id: patientId,
+        patient_id: patientId,
+        patient_table: patientTable,
         amount: calculatedPrice,
         hijama_points_count: hijamaPoints.length,
         payment_status: "pending"

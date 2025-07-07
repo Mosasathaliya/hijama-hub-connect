@@ -19,7 +19,7 @@ interface Payment {
   id: string;
   amount: number;
   paid_at: string;
-  patient_form_id: string;
+  patient_id: string;
   patient_forms: {
     patient_name: string;
     patient_phone: string;
@@ -99,18 +99,7 @@ const ManagementSection = ({ onBack }: ManagementSectionProps) => {
 
       let query = supabase
         .from('payments')
-        .select(`
-          id,
-          amount,
-          paid_at,
-          doctor_id,
-          payment_status,
-          patient_form_id,
-          patient_forms (
-            patient_name,
-            patient_phone
-          )
-        `)
+        .select('*')
         .eq('doctor_id', selectedDoctor)
         .order('paid_at', { ascending: false });
 
@@ -124,15 +113,53 @@ const ManagementSection = ({ onBack }: ManagementSectionProps) => {
         query = query.lte('paid_at', format(toDate, 'yyyy-MM-dd') + 'T23:59:59.999Z');
       }
 
-      const { data, error } = await query;
+      const { data: rawData, error } = await query;
 
       if (error) throw error;
 
-      console.log('Filtered payments for doctor:', data);
-      setPayments(data || []);
+      // For each payment, fetch patient data from the appropriate table
+      const paymentsWithPatients = await Promise.all(
+        (rawData || []).map(async (payment) => {
+          let patientData = null;
+          
+          if (payment.patient_table === 'male_patients') {
+            const { data } = await supabase
+              .from('male_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else if (payment.patient_table === 'female_patients') {
+            const { data } = await supabase
+              .from('female_patients')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          } else {
+            const { data } = await supabase
+              .from('patient_forms')
+              .select('patient_name, patient_phone')
+              .eq('id', payment.patient_id)
+              .single();
+            patientData = data;
+          }
+
+          return {
+            ...payment,
+            patient_forms: {
+              patient_name: patientData?.patient_name || 'غير متوفر',
+              patient_phone: patientData?.patient_phone || 'غير متوفر'
+            }
+          };
+        })
+      );
+
+      console.log('Filtered payments for doctor:', paymentsWithPatients);
+      setPayments(paymentsWithPatients || []);
       
       // Calculate totals
-      const total = (data || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
+      const total = (paymentsWithPatients || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
       setTotalAmount(total);
       setCommission(total * 0.03); // 3% commission
 
