@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const patientFormSchema = z.object({
   patient_phone: z.string().min(8, "رقم الهاتف مطلوب"),
   id_number: z.string().min(10, "رقم الهوية مطلوب"),
   age: z.number().min(1, "العمر مطلوب").max(120, "عمر غير صحيح"),
+  gender: z.string().min(1, "الجنس مطلوب"),
   appointment_date: z.date({ required_error: "تاريخ الموعد المطلوب" }),
   appointment_time: z.string().min(1, "وقت الموعد مطلوب"),
   medical_notes: z.string().optional(),
@@ -161,6 +163,22 @@ const PatientForm = () => {
                   />
                   {form.formState.errors.age && (
                     <p className="text-sm text-destructive">{form.formState.errors.age.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">الجنس *</Label>
+                  <Select onValueChange={(value) => form.setValue("gender", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الجنس" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">ذكر</SelectItem>
+                      <SelectItem value="female">أنثى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.gender && (
+                    <p className="text-sm text-destructive">{form.formState.errors.gender.message}</p>
                   )}
                 </div>
               </div>
