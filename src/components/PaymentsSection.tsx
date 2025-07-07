@@ -42,6 +42,19 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
   const [totalAmount, setTotalAmount] = useState(0);
   const { toast } = useToast();
 
+  const getPaymentMethodInArabic = (method: string) => {
+    switch (method) {
+      case 'card':
+        return 'بطاقة ائتمانية';
+      case 'cash':
+        return 'نقداً';
+      case 'bank_transfer':
+        return 'تحويل بنكي';
+      default:
+        return 'نقداً';
+    }
+  };
+
   useEffect(() => {
     fetchPayments();
   }, []);
@@ -275,7 +288,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {payment.payment_method}
+                          {getPaymentMethodInArabic(payment.payment_method)}
                         </Badge>
                       </TableCell>
                       <TableCell>
