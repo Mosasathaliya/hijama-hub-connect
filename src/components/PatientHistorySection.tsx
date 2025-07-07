@@ -87,9 +87,17 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
       const hasAccessToMales = userPermissions.includes("الوصول للذكور");
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
-      console.log("User permissions:", userPermissions);
-      console.log("Access to males:", hasAccessToMales);
-      console.log("Access to females:", hasAccessToFemales);
+      console.log("PatientHistory - User permissions:", userPermissions);
+      console.log("PatientHistory - Access to males:", hasAccessToMales);
+      console.log("PatientHistory - Access to females:", hasAccessToFemales);
+      
+      // If user has no gender permissions, don't show any patients
+      if (!hasAccessToMales && !hasAccessToFemales) {
+        console.log("PatientHistory - No gender permissions, showing no patients");
+        setPatients([]);
+        setLoading(false);
+        return;
+      }
 
       let allPatients: Patient[] = [];
 

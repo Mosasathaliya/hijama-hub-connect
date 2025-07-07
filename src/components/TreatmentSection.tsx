@@ -90,6 +90,17 @@ const TreatmentSection = ({ onBack, onNavigateToPayment }: TreatmentSectionProps
       const hasAccessToMales = userPermissions.includes("الوصول للذكور");
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
+      console.log("Treatment - User permissions:", userPermissions);
+      console.log("Treatment - Access to males:", hasAccessToMales);
+      console.log("Treatment - Access to females:", hasAccessToFemales);
+      
+      // If user has no gender permissions, don't show any patients
+      if (!hasAccessToMales && !hasAccessToFemales) {
+        console.log("Treatment - No gender permissions, showing no patients");
+        setPatientsInTreatment([]);
+        return;
+      }
+
       let allPatientsInTreatment: Patient[] = [];
 
       // Fetch male patients in treatment if user has access

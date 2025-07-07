@@ -149,9 +149,16 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
       const hasAccessToMales = userPermissions.includes("الوصول للذكور");
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
-      console.log("User permissions:", userPermissions);
-      console.log("Access to males:", hasAccessToMales);
-      console.log("Access to females:", hasAccessToFemales);
+      console.log("Appointments - User permissions:", userPermissions);
+      console.log("Appointments - Access to males:", hasAccessToMales);
+      console.log("Appointments - Access to females:", hasAccessToFemales);
+      
+      // If user has no gender permissions, don't show any patients
+      if (!hasAccessToMales && !hasAccessToFemales) {
+        console.log("Appointments - No gender permissions, showing no patients");
+        setAppointments([]);
+        return;
+      }
 
       let allAppointments: Appointment[] = [];
 
