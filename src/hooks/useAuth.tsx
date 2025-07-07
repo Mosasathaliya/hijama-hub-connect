@@ -21,10 +21,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userData = localStorage.getItem("hijama_user_data");
     const permissions = localStorage.getItem("hijama_user_permissions");
     
+    console.log("Auth initialization - loggedIn:", loggedIn);
+    console.log("Auth initialization - userData:", userData);
+    console.log("Auth initialization - permissions:", permissions);
+    
     if (loggedIn && userData) {
       setIsLoggedIn(true);
       setCurrentUser(JSON.parse(userData));
-      setUserPermissions(permissions ? JSON.parse(permissions) : []);
+      const parsedPermissions = permissions ? JSON.parse(permissions) : [];
+      setUserPermissions(parsedPermissions);
+      console.log("Auth initialization - Parsed permissions:", parsedPermissions);
     }
   }, []);
 
