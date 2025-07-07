@@ -138,16 +138,14 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
       if (hasAccessToMales && !hasAccessToFemales) {
-        // Only male patients
-        query = query.eq("gender", "male");
+        // Only male patients (including null gender for backwards compatibility)
+        query = query.or("gender.eq.male,gender.is.null");
       } else if (hasAccessToFemales && !hasAccessToMales) {
-        // Only female patients
-        query = query.eq("gender", "female");
+        // Only female patients (including null gender for backwards compatibility)
+        query = query.or("gender.eq.female,gender.is.null");
       } else if (!hasAccessToMales && !hasAccessToFemales) {
-        // No gender access - return empty result
-        setAppointments([]);
-        setLoading(false);
-        return;
+        // No gender access - show appointments without gender for backwards compatibility
+        query = query.is("gender", null);
       }
       // If both permissions exist, show all appointments (no filter needed)
 
@@ -271,13 +269,11 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
       if (hasAccessToMales && !hasAccessToFemales) {
-        searchQuery = searchQuery.eq("gender", "male");
+        searchQuery = searchQuery.or("gender.eq.male,gender.is.null");
       } else if (hasAccessToFemales && !hasAccessToMales) {
-        searchQuery = searchQuery.eq("gender", "female");
+        searchQuery = searchQuery.or("gender.eq.female,gender.is.null");
       } else if (!hasAccessToMales && !hasAccessToFemales) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
+        searchQuery = searchQuery.is("gender", null);
       }
 
       const { data, error } = await searchQuery
