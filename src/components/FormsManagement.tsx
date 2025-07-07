@@ -55,6 +55,7 @@ const FormsManagement = ({ onBack }: FormsManagementProps) => {
         preferred_appointment_date: format(data.appointment_date, 'yyyy-MM-dd'),
         preferred_appointment_time: data.appointment_time,
         additional_notes: null,
+        gender: data.gender,
         status: 'scheduled'
       };
 

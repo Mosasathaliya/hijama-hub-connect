@@ -53,6 +53,7 @@ const PatientForm = () => {
         preferred_appointment_date: format(data.appointment_date, 'yyyy-MM-dd'),
         preferred_appointment_time: data.appointment_time,
         additional_notes: data.medical_notes || null,
+        gender: data.gender,
         form_token: crypto.randomUUID(),
       };
 

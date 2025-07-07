@@ -170,6 +170,7 @@ export type Database = {
           date_of_birth: string | null
           doctor_id: string | null
           form_token: string
+          gender: string | null
           id: string
           medical_history: string | null
           patient_email: string | null
@@ -190,6 +191,7 @@ export type Database = {
           date_of_birth?: string | null
           doctor_id?: string | null
           form_token?: string
+          gender?: string | null
           id?: string
           medical_history?: string | null
           patient_email?: string | null
@@ -210,6 +212,7 @@ export type Database = {
           date_of_birth?: string | null
           doctor_id?: string | null
           form_token?: string
+          gender?: string | null
           id?: string
           medical_history?: string | null
           patient_email?: string | null
