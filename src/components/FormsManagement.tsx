@@ -43,6 +43,8 @@ const FormsManagement = ({ onBack }: FormsManagementProps) => {
   const onSubmit = async (data: PatientFormData) => {
     setLoading(true);
     try {
+      const tableName = data.gender === 'male' ? 'male_patients' : 'female_patients';
+      
       const formData = {
         patient_name: data.patient_name,
         patient_phone: data.patient_phone,
@@ -55,12 +57,11 @@ const FormsManagement = ({ onBack }: FormsManagementProps) => {
         preferred_appointment_date: format(data.appointment_date, 'yyyy-MM-dd'),
         preferred_appointment_time: data.appointment_time,
         additional_notes: null,
-        gender: data.gender,
         status: 'scheduled'
       };
 
       const { error } = await supabase
-        .from("patient_forms")
+        .from(tableName)
         .insert([formData]);
 
       if (error) throw error;

@@ -72,26 +72,44 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   useEffect(() => {
     fetchAppointments();
     
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('appointments-changes')
+    // Set up real-time subscription for both male and female tables
+    const maleChannel = supabase
+      .channel('male-patients-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'patient_forms',
+          table: 'male_patients',
           filter: 'preferred_appointment_date=not.is.null'
         },
         () => {
-          console.log('Appointment data changed, refetching...');
+          console.log('Male patient data changed, refetching...');
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    const femaleChannel = supabase
+      .channel('female-patients-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'female_patients',
+          filter: 'preferred_appointment_date=not.is.null'
+        },
+        () => {
+          console.log('Female patient data changed, refetching...');
           fetchAppointments();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(maleChannel);
+      supabase.removeChannel(femaleChannel);
     };
   }, [userPermissions]);
 
@@ -128,31 +146,53 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
   const fetchAppointments = async () => {
     try {
-      let query = supabase
-        .from("patient_forms")
-        .select("*")
-        .not("preferred_appointment_date", "is", null);
-
-      // Apply gender-based filtering based on user permissions
       const hasAccessToMales = userPermissions.includes("الوصول للذكور");
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
-      if (hasAccessToMales && !hasAccessToFemales) {
-        // Only male patients (including null gender for backwards compatibility)
-        query = query.or("gender.eq.male,gender.is.null");
-      } else if (hasAccessToFemales && !hasAccessToMales) {
-        // Only female patients (including null gender for backwards compatibility)
-        query = query.or("gender.eq.female,gender.is.null");
-      } else if (!hasAccessToMales && !hasAccessToFemales) {
-        // No gender access - show appointments without gender for backwards compatibility
-        query = query.is("gender", null);
+      let allAppointments: Appointment[] = [];
+
+      // Fetch male patients if user has access
+      if (hasAccessToMales) {
+        const { data: maleData, error: maleError } = await supabase
+          .from("male_patients")
+          .select("*")
+          .not("preferred_appointment_date", "is", null)
+          .order("submitted_at", { ascending: false });
+
+        if (maleError) throw maleError;
+        
+        // Add gender field to identify the source
+        const maleAppointments = (maleData || []).map(apt => ({
+          ...apt,
+          gender: 'male'
+        }));
+        allAppointments = [...allAppointments, ...maleAppointments];
       }
-      // If both permissions exist, show all appointments (no filter needed)
 
-      const { data, error } = await query.order("submitted_at", { ascending: false });
+      // Fetch female patients if user has access
+      if (hasAccessToFemales) {
+        const { data: femaleData, error: femaleError } = await supabase
+          .from("female_patients")
+          .select("*")
+          .not("preferred_appointment_date", "is", null)
+          .order("submitted_at", { ascending: false });
 
-      if (error) throw error;
-      setAppointments(data || []);
+        if (femaleError) throw femaleError;
+        
+        // Add gender field to identify the source
+        const femaleAppointments = (femaleData || []).map(apt => ({
+          ...apt,
+          gender: 'female'
+        }));
+        allAppointments = [...allAppointments, ...femaleAppointments];
+      }
+
+      // Sort all appointments by submitted_at
+      allAppointments.sort((a, b) => 
+        new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+      );
+
+      setAppointments(allAppointments);
     } catch (error) {
       console.error("Error fetching appointments:", error);
       toast({
@@ -167,8 +207,13 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
   const updateAppointmentStatus = async (appointmentId: string, status: string) => {
     try {
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      if (!appointment) return;
+
+      const tableName = appointment.gender === 'male' ? 'male_patients' : 'female_patients';
+      
       const { error } = await supabase
-        .from("patient_forms")
+        .from(tableName)
         .update({ status })
         .eq("id", appointmentId);
 
@@ -194,8 +239,13 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
   const sendToTreatment = async (appointmentId: string) => {
     try {
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      if (!appointment) return;
+
+      const tableName = appointment.gender === 'male' ? 'male_patients' : 'female_patients';
+      
       const { error } = await supabase
-        .from("patient_forms")
+        .from(tableName)
         .update({ status: "in_treatment" })
         .eq("id", appointmentId);
 
@@ -259,30 +309,54 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
     setIsSearching(true);
     try {
-      let searchQuery = supabase
-        .from("patient_forms")
-        .select("*")
-        .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,chief_complaint.ilike.%${query}%`);
-
-      // Apply gender-based filtering to search results
       const hasAccessToMales = userPermissions.includes("الوصول للذكور");
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
-      if (hasAccessToMales && !hasAccessToFemales) {
-        searchQuery = searchQuery.or("gender.eq.male,gender.is.null");
-      } else if (hasAccessToFemales && !hasAccessToMales) {
-        searchQuery = searchQuery.or("gender.eq.female,gender.is.null");
-      } else if (!hasAccessToMales && !hasAccessToFemales) {
-        searchQuery = searchQuery.is("gender", null);
+      let allSearchResults: Appointment[] = [];
+
+      // Search male patients if user has access
+      if (hasAccessToMales) {
+        const { data: maleResults, error: maleError } = await supabase
+          .from("male_patients")
+          .select("*")
+          .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
+          .order("submitted_at", { ascending: false })
+          .limit(5);
+
+        if (maleError) throw maleError;
+        
+        const maleSearchResults = (maleResults || []).map(result => ({
+          ...result,
+          gender: 'male'
+        }));
+        allSearchResults = [...allSearchResults, ...maleSearchResults];
       }
 
-      const { data, error } = await searchQuery
-        .order("submitted_at", { ascending: false })
-        .limit(10);
+      // Search female patients if user has access  
+      if (hasAccessToFemales) {
+        const { data: femaleResults, error: femaleError } = await supabase
+          .from("female_patients")
+          .select("*")
+          .or(`patient_name.ilike.%${query}%,patient_phone.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
+          .order("submitted_at", { ascending: false })
+          .limit(5);
 
-      if (error) throw error;
-      console.log("Search results:", data);
-      setSearchResults(data || []);
+        if (femaleError) throw femaleError;
+        
+        const femaleSearchResults = (femaleResults || []).map(result => ({
+          ...result,
+          gender: 'female'
+        }));
+        allSearchResults = [...allSearchResults, ...femaleSearchResults];
+      }
+
+      // Sort all results by submitted_at
+      allSearchResults.sort((a, b) => 
+        new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+      );
+
+      // Limit to 10 total results
+      setSearchResults(allSearchResults.slice(0, 10));
     } catch (error) {
       console.error("Error searching customers:", error);
       toast({
@@ -314,8 +388,10 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
     }
 
     try {
+      const tableName = selectedCustomer.gender === 'male' ? 'male_patients' : 'female_patients';
+      
       const { error } = await supabase
-        .from("patient_forms")
+        .from(tableName)
         .insert({
           patient_name: selectedCustomer.patient_name,
           patient_phone: selectedCustomer.patient_phone,
@@ -327,7 +403,6 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
           additional_notes: selectedCustomer.additional_notes,
           preferred_appointment_date: format(appointmentDate, 'yyyy-MM-dd'),
           preferred_appointment_time: appointmentTime,
-          gender: selectedCustomer.gender,
           status: "scheduled"
         });
 
