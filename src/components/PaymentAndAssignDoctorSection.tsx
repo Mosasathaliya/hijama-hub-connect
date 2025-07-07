@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
 interface Patient {
@@ -377,8 +378,89 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const fetchPendingPayments = async () => {
     try {
       console.log("Fetching pending payments from payments table...");
-      // This section is now handled above in the new code
-      // Remove this duplicate code
+      
+      // Fetch pending payments
+      const { data: paymentData, error } = await supabase
+        .from("payments")
+        .select(`
+          *,
+          doctors (
+            name
+          )
+        `)
+        .eq("payment_status", "pending");
+
+      if (error) throw error;
+      console.log("Raw payment data:", paymentData);
+
+      // Fetch patients from both male and female tables
+      const [maleData, femaleData] = await Promise.all([
+        supabase
+          .from('male_patients')
+          .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
+          .eq('status', 'payment_pending'),
+        supabase
+          .from('female_patients')
+          .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
+          .eq('status', 'payment_pending')
+      ]);
+
+      const malePatients = maleData.data || [];
+      const femalePatients = femaleData.data || [];
+
+      // Combine all patients
+      const allPatients = [
+        ...malePatients.map(p => ({ ...p, gender: 'male', table: 'male_patients' })),
+        ...femalePatients.map(p => ({ ...p, gender: 'female', table: 'female_patients' }))
+      ];
+
+      console.log("All patients with payment_pending status:", allPatients);
+
+      // Match patients with their payment records
+      const paymentsWithPatients = [];
+      
+      for (const payment of paymentData || []) {
+        const patient = allPatients.find(p => 
+          p.id === payment.patient_id && 
+          (payment.patient_table === p.table || 
+           (payment.patient_table === 'male_patients' && p.table === 'male_patients') ||
+           (payment.patient_table === 'female_patients' && p.table === 'female_patients'))
+        );
+        
+        if (patient) {
+          paymentsWithPatients.push({
+            ...payment,
+            patient_data: patient
+          });
+        }
+      }
+
+      console.log("Matched payments with patients:", paymentsWithPatients);
+      
+      const formattedData = paymentsWithPatients?.map(payment => ({
+        id: payment.patient_id,
+        patient_name: payment.patient_data?.patient_name || 'غير متوفر',
+        patient_phone: payment.patient_data?.patient_phone || 'غير متوفر',
+        preferred_appointment_date: payment.patient_data?.preferred_appointment_date || '',
+        preferred_appointment_time: payment.patient_data?.preferred_appointment_time || '',
+        chief_complaint: payment.patient_data?.chief_complaint || '',
+        status: "payment_pending",
+        submitted_at: payment.created_at,
+        medical_history: "",
+        additional_notes: "",
+        hijama_readings: [{
+          hijama_points: [],
+          created_at: payment.created_at
+        }],
+        payment_id: payment.id,
+        hijama_points_count: payment.hijama_points_count,
+        calculated_price: payment.amount,
+        patient_gender: payment.patient_data?.gender,
+        patient_table: payment.patient_data?.table
+      })) || [];
+
+      console.log("Final formatted data:", formattedData);
+      setPendingPayments(formattedData);
     } catch (error) {
       console.error("Error fetching pending payments:", error);
       toast({
