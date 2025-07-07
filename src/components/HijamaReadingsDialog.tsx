@@ -25,6 +25,7 @@ interface HijamaReadingsDialogProps {
   appointmentDate: string;
   appointmentTime: string;
   treatmentConditions: string[];
+  patientGender?: string;
   onNavigateToPayment?: (paymentData: any) => void;
 }
 
@@ -35,6 +36,7 @@ const HijamaReadingsDialog = ({
   appointmentDate, 
   appointmentTime, 
   treatmentConditions,
+  patientGender,
   onNavigateToPayment
 }: HijamaReadingsDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -123,14 +125,21 @@ const HijamaReadingsDialog = ({
     try {
       console.log("Starting to save readings...");
       console.log("Patient ID:", patientId);
+      console.log("Patient Gender:", patientGender);
       console.log("Hijama points count:", hijamaPoints.length);
       console.log("Calculated price:", calculatedPrice);
+
+      // Determine the patient table based on gender
+      const patientTable = patientGender === 'male' ? 'male_patients' : 
+                          patientGender === 'female' ? 'female_patients' : 
+                          'patient_forms';
 
       // Save hijama readings to database
       const { error: readingsError } = await supabase
         .from("hijama_readings")
         .insert({
-          patient_form_id: patientId,
+          patient_id: patientId,
+          patient_table: patientTable,
           blood_pressure_systolic: bloodPressure.systolic ? parseInt(bloodPressure.systolic) : null,
           blood_pressure_diastolic: bloodPressure.diastolic ? parseInt(bloodPressure.diastolic) : null,
           weight: weight ? parseFloat(weight) : null,
@@ -165,9 +174,9 @@ const HijamaReadingsDialog = ({
 
       console.log("Payment record created successfully:", paymentResult);
 
-      // Update patient status to payment_pending
+      // Update patient status to payment_pending in the correct table
       const { error: statusError } = await supabase
-        .from("patient_forms")
+        .from(patientTable)
         .update({ status: "payment_pending" })
         .eq("id", patientId);
 

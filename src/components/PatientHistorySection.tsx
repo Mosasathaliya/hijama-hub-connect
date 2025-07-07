@@ -185,7 +185,7 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
       const { data: readings, error: readingsError } = await supabase
         .from("hijama_readings")
         .select("*")
-        .eq("patient_form_id", patient.id)
+        .eq("patient_id", patient.id)
         .order("created_at", { ascending: false });
 
       if (readingsError) throw readingsError;

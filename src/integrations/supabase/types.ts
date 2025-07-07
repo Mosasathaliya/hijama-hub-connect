@@ -189,7 +189,8 @@ export type Database = {
           created_at: string
           hijama_points: Json | null
           id: string
-          patient_form_id: string
+          patient_id: string
+          patient_table: string | null
           updated_at: string
           weight: number | null
         }
@@ -199,7 +200,8 @@ export type Database = {
           created_at?: string
           hijama_points?: Json | null
           id?: string
-          patient_form_id: string
+          patient_id: string
+          patient_table?: string | null
           updated_at?: string
           weight?: number | null
         }
@@ -209,19 +211,12 @@ export type Database = {
           created_at?: string
           hijama_points?: Json | null
           id?: string
-          patient_form_id?: string
+          patient_id?: string
+          patient_table?: string | null
           updated_at?: string
           weight?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "hijama_readings_patient_form_id_fkey"
-            columns: ["patient_form_id"]
-            isOneToOne: false
-            referencedRelation: "patient_forms"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       male_patients: {
         Row: {

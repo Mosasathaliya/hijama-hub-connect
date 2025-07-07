@@ -112,37 +112,71 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
 
   const fetchHijamaReadings = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch all hijama readings
+      const { data: readingsData, error } = await supabase
         .from("hijama_readings")
         .select(`
           id,
+          patient_id,
+          patient_table,
           blood_pressure_systolic,
           blood_pressure_diastolic,
           weight,
           hijama_points,
-          created_at,
-          patient_forms!inner(
-            patient_name,
-            patient_phone,
-            preferred_appointment_date
-          )
+          created_at
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const formattedReadings = data?.map(reading => ({
-        id: reading.id,
-        patient_name: reading.patient_forms.patient_name,
-        patient_phone: reading.patient_forms.patient_phone,
-        preferred_appointment_date: reading.patient_forms.preferred_appointment_date,
-        blood_pressure_systolic: reading.blood_pressure_systolic,
-        blood_pressure_diastolic: reading.blood_pressure_diastolic,
-        weight: reading.weight,
-        hijama_points: Array.isArray(reading.hijama_points) ? (reading.hijama_points as unknown as HijamaPoint[]) : [],
-        created_at: reading.created_at
-      })) || [];
+      if (!readingsData || readingsData.length === 0) {
+        setHijamaReadings([]);
+        return;
+      }
 
+      // Group readings by table
+      const readingsByTable = readingsData.reduce((acc, reading) => {
+        const table = reading.patient_table || 'patient_forms';
+        if (!acc[table]) acc[table] = [];
+        acc[table].push(reading);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Fetch patient data for each table
+      const formattedReadings = [];
+      
+      for (const [tableName, tableReadings] of Object.entries(readingsByTable)) {
+        if (tableName === 'patient_forms' || tableName === 'male_patients' || tableName === 'female_patients') {
+          const patientIds = tableReadings.map(r => r.patient_id);
+          
+          const { data: patientsData } = await supabase
+            .from(tableName)
+            .select('id, patient_name, patient_phone, preferred_appointment_date')
+            .in('id', patientIds);
+
+          // Merge reading data with patient data
+          for (const reading of tableReadings) {
+            const patient = patientsData?.find(p => p.id === reading.patient_id);
+            if (patient) {
+              formattedReadings.push({
+                id: reading.id,
+                patient_name: patient.patient_name,
+                patient_phone: patient.patient_phone,
+                preferred_appointment_date: patient.preferred_appointment_date,
+                blood_pressure_systolic: reading.blood_pressure_systolic,
+                blood_pressure_diastolic: reading.blood_pressure_diastolic,
+                weight: reading.weight,
+                hijama_points: Array.isArray(reading.hijama_points) ? (reading.hijama_points as unknown as HijamaPoint[]) : [],
+                created_at: reading.created_at
+              });
+            }
+          }
+        }
+      }
+
+      // Sort by created_at
+      formattedReadings.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
       setHijamaReadings(formattedReadings);
     } catch (error) {
       console.error("Error fetching hijama readings:", error);

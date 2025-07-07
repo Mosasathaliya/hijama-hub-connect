@@ -418,6 +418,7 @@ const TreatmentSection = ({ onBack, onNavigateToPayment }: TreatmentSectionProps
                           appointmentDate={format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}
                           appointmentTime={patient.preferred_appointment_time}
                           treatmentConditions={treatmentConditions[patient.id]?.filter(c => c.is_checked).map(c => c.condition_name) || []}
+                          patientGender={patient.gender}
                           onNavigateToPayment={onNavigateToPayment}
                         />
                         
