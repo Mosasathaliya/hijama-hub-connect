@@ -149,6 +149,10 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
       const hasAccessToMales = userPermissions.includes("الوصول للذكور");
       const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
+      console.log("User permissions:", userPermissions);
+      console.log("Access to males:", hasAccessToMales);
+      console.log("Access to females:", hasAccessToFemales);
+
       let allAppointments: Appointment[] = [];
 
       // Fetch male patients if user has access

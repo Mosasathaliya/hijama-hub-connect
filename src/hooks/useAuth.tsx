@@ -39,12 +39,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           is_active: true
         };
         
-        // Admin has all permissions
+        // Admin has all permissions including gender access
         const allPermissions = [
           "الإدارة", "المواعيد", "العلاج", "دفع وتعيين طبيب", 
           "نقاط الحجامة المحددة", "المدفوعات", "تاريخ المرضى", 
           "إضافة طبيب جديد", "النماذج", "أسعار كؤوس الحجامة", 
-          "إضافة مستخدم جديد", "الفواتير", "كوبون", "عمولة الإحالة"
+          "إضافة مستخدم جديد", "الفواتير", "كوبون", "عمولة الإحالة",
+          "الوصول للذكور", "الوصول للإناث"
         ];
 
         setIsLoggedIn(true);
