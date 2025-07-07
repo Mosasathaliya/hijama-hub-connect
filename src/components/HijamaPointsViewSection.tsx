@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [showTodayOnly, setShowTodayOnly] = useState(false);
   const { toast } = useToast();
+  const { userPermissions } = useAuth();
 
   useEffect(() => {
     fetchHijamaReadings();
@@ -78,7 +80,7 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userPermissions]);
 
   useEffect(() => {
     filterReadings();
@@ -112,8 +114,23 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
 
   const fetchHijamaReadings = async () => {
     try {
-      // First fetch all hijama readings
-      const { data: readingsData, error } = await supabase
+      const hasAccessToMales = userPermissions.includes("الوصول للذكور");
+      const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
+
+      console.log("HijamaPoints - User permissions:", userPermissions);
+      console.log("HijamaPoints - Access to males:", hasAccessToMales);
+      console.log("HijamaPoints - Access to females:", hasAccessToFemales);
+      
+      // If user has no gender permissions, don't show any readings
+      if (!hasAccessToMales && !hasAccessToFemales) {
+        console.log("HijamaPoints - No gender permissions, showing no readings");
+        setHijamaReadings([]);
+        setLoading(false);
+        return;
+      }
+
+      // First fetch all hijama readings with patient_table filter
+      let readingsQuery = supabase
         .from("hijama_readings")
         .select(`
           id,
@@ -126,6 +143,17 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
           created_at
         `)
         .order("created_at", { ascending: false });
+
+      // Apply gender-based filtering
+      const allowedTables = [];
+      if (hasAccessToMales) allowedTables.push('male_patients');
+      if (hasAccessToFemales) allowedTables.push('female_patients');
+      
+      if (allowedTables.length > 0) {
+        readingsQuery = readingsQuery.in('patient_table', allowedTables);
+      }
+
+      const { data: readingsData, error } = await readingsQuery;
 
       if (error) throw error;
 
@@ -142,11 +170,13 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Fetch patient data for each table
+      // Fetch patient data for each allowed table only
       const formattedReadings = [];
       
       for (const [tableName, tableReadings] of Object.entries(readingsByTable)) {
-        if (tableName === 'patient_forms' || tableName === 'male_patients' || tableName === 'female_patients') {
+        // Only process tables the user has access to
+        if ((tableName === 'male_patients' && hasAccessToMales) || 
+            (tableName === 'female_patients' && hasAccessToFemales)) {
           const patientIds = tableReadings.map(r => r.patient_id);
           
           const { data: patientsData } = await supabase
@@ -177,6 +207,7 @@ const HijamaPointsViewSection = ({ onBack }: HijamaPointsViewSectionProps) => {
       // Sort by created_at
       formattedReadings.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
+      console.log("HijamaPoints - Formatted readings based on permissions:", formattedReadings);
       setHijamaReadings(formattedReadings);
     } catch (error) {
       console.error("Error fetching hijama readings:", error);
