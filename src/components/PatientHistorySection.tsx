@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
 interface Patient {
@@ -69,10 +70,11 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const { userPermissions } = useAuth();
 
   useEffect(() => {
     fetchPatients();
-  }, []);
+  }, [userPermissions]);
 
   useEffect(() => {
     filterPatients();
@@ -82,48 +84,88 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from("patient_forms")
-        .select(`
-          id,
-          patient_name,
-          patient_phone,
-          patient_email,
-          date_of_birth,
-          chief_complaint,
-          medical_history,
-          allergies,
-          current_medications,
-          status,
-          submitted_at,
-          doctors(name)
-        `)
-        .order("submitted_at", { ascending: false });
+      const hasAccessToMales = userPermissions.includes("الوصول للذكور");
+      const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
 
-      if (error) throw error;
+      console.log("User permissions:", userPermissions);
+      console.log("Access to males:", hasAccessToMales);
+      console.log("Access to females:", hasAccessToFemales);
 
-      // Get payment statistics for each patient
-      const patientsWithStats = await Promise.all(
-        (data || []).map(async (patient) => {
-          const { data: payments } = await supabase
-            .from("payments")
-            .select("amount")
-            .eq("patient_id", patient.id)
-            .eq("payment_status", "completed");
+      let allPatients: Patient[] = [];
 
-          const totalPayments = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-          const totalVisits = payments?.length || 0;
+      // Fetch male patients if user has access
+      if (hasAccessToMales) {
+        const { data: maleData, error: maleError } = await supabase
+          .from("male_patients")
+          .select("*")
+          .order("submitted_at", { ascending: false });
 
-          return {
-            ...patient,
-            doctor_name: patient.doctors?.name,
-            total_payments: totalPayments,
-            total_visits: totalVisits
-          };
-        })
-      );
+        if (maleError) throw maleError;
 
-      setPatients(patientsWithStats);
+        if (maleData) {
+          const malePatients = await Promise.all(
+            maleData.map(async (patient) => {
+              const { data: payments } = await supabase
+                .from("payments")
+                .select("amount")
+                .eq("patient_id", patient.id)
+                .eq("patient_table", "male_patients")
+                .eq("payment_status", "completed");
+
+              const totalPayments = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+              const totalVisits = payments?.length || 0;
+
+              return {
+                ...patient,
+                doctor_name: "",
+                total_payments: totalPayments,
+                total_visits: totalVisits
+              };
+            })
+          );
+          allPatients = [...allPatients, ...malePatients];
+        }
+      }
+
+      // Fetch female patients if user has access
+      if (hasAccessToFemales) {
+        const { data: femaleData, error: femaleError } = await supabase
+          .from("female_patients")
+          .select("*")
+          .order("submitted_at", { ascending: false });
+
+        if (femaleError) throw femaleError;
+
+        if (femaleData) {
+          const femalePatients = await Promise.all(
+            femaleData.map(async (patient) => {
+              const { data: payments } = await supabase
+                .from("payments")
+                .select("amount")
+                .eq("patient_id", patient.id)
+                .eq("patient_table", "female_patients")
+                .eq("payment_status", "completed");
+
+              const totalPayments = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+              const totalVisits = payments?.length || 0;
+
+              return {
+                ...patient,
+                doctor_name: "",
+                total_payments: totalPayments,
+                total_visits: totalVisits
+              };
+            })
+          );
+          allPatients = [...allPatients, ...femalePatients];
+        }
+      }
+
+      // Sort all patients by submission date
+      allPatients.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+
+      console.log("Fetched patients based on permissions:", allPatients);
+      setPatients(allPatients);
     } catch (error) {
       console.error("Error fetching patients:", error);
       toast({
@@ -153,6 +195,28 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
     try {
       setSelectedPatient(patient);
       
+      // Determine patient table based on available permissions and patient context
+      const hasAccessToMales = userPermissions.includes("الوصول للذكور");
+      const hasAccessToFemales = userPermissions.includes("الوصول للإناث");
+      
+      let patientTable = "";
+      if (hasAccessToMales && hasAccessToFemales) {
+        // If admin has access to both, we need to determine based on the patient data
+        // We'll check both tables to find where this patient exists
+        const maleCheck = await supabase.from("male_patients").select("id").eq("id", patient.id).single();
+        const femaleCheck = await supabase.from("female_patients").select("id").eq("id", patient.id).single();
+        
+        if (maleCheck.data) {
+          patientTable = "male_patients";
+        } else if (femaleCheck.data) {
+          patientTable = "female_patients";
+        }
+      } else if (hasAccessToMales) {
+        patientTable = "male_patients";
+      } else if (hasAccessToFemales) {
+        patientTable = "female_patients";
+      }
+      
       // Fetch payment history
       const { data: payments, error: paymentsError } = await supabase
         .from("payments")
@@ -165,6 +229,7 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
           doctors(name)
         `)
         .eq("patient_id", patient.id)
+        .eq("patient_table", patientTable)
         .eq("payment_status", "completed")
         .order("paid_at", { ascending: false });
 
@@ -186,6 +251,7 @@ const PatientHistorySection = ({ onBack }: PatientHistorySectionProps) => {
         .from("hijama_readings")
         .select("*")
         .eq("patient_id", patient.id)
+        .eq("patient_table", patientTable)
         .order("created_at", { ascending: false });
 
       if (readingsError) throw readingsError;
