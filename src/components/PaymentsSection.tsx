@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   CreditCard, 
   Calendar,
@@ -40,6 +41,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
   const [fromDate, setFromDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [totalAmount, setTotalAmount] = useState(0);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const { toast } = useToast();
 
   const getPaymentMethodInArabic = (method: string) => {
@@ -61,7 +63,12 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
 
   useEffect(() => {
     calculateTotal();
-  }, [payments]);
+  }, [payments, selectedPaymentMethod]);
+
+  // Filter payments based on selected payment method
+  const filteredPayments = selectedPaymentMethod === "all" 
+    ? payments 
+    : payments.filter(payment => payment.payment_method === selectedPaymentMethod);
 
   const fetchPayments = async (startDate?: string, endDate?: string) => {
     try {
@@ -127,7 +134,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
   };
 
   const calculateTotal = () => {
-    const total = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const total = filteredPayments.reduce((sum, payment) => sum + Number(payment.amount), 0);
     setTotalAmount(total);
   };
 
@@ -189,6 +196,20 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
                 onChange={(e) => setToDate(e.target.value)}
               />
             </div>
+            <div className="flex-1 min-w-40">
+              <Label htmlFor="payment-method">طريقة الدفع</Label>
+              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر طريقة الدفع" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الطرق</SelectItem>
+                  <SelectItem value="card">بطاقة ائتمانية</SelectItem>
+                  <SelectItem value="cash">نقداً</SelectItem>
+                  <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handleDateFilter} className="flex items-center gap-2">
               <Search className="w-4 h-4" />
               بحث
@@ -206,7 +227,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-primary">عدد المدفوعات</CardTitle>
-            <div className="text-3xl font-bold text-accent">{payments.length}</div>
+            <div className="text-3xl font-bold text-accent">{filteredPayments.length}</div>
           </CardHeader>
         </Card>
         <Card>
@@ -219,7 +240,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
           <CardHeader className="text-center">
             <CardTitle className="text-primary">متوسط المبلغ</CardTitle>
             <div className="text-3xl font-bold text-accent">
-              {payments.length > 0 ? (totalAmount / payments.length).toFixed(2) : "0"} ر.س
+              {filteredPayments.length > 0 ? (totalAmount / filteredPayments.length).toFixed(2) : "0"} ر.س
             </div>
           </CardHeader>
         </Card>
@@ -230,7 +251,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-green-600" />
-            المدفوعات ({payments.length})
+            المدفوعات ({filteredPayments.length})
           </CardTitle>
           <CardDescription>
             عرض المدفوعات من {format(new Date(fromDate), "dd/MM/yyyy")} إلى {format(new Date(toDate), "dd/MM/yyyy")}
@@ -239,7 +260,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
         <CardContent>
           {loading ? (
             <div className="text-center py-8">جاري التحميل...</div>
-          ) : payments.length === 0 ? (
+          ) : filteredPayments.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">لا يوجد مدفوعات في هذه الفترة</p>
@@ -260,7 +281,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment) => (
+                  {filteredPayments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
