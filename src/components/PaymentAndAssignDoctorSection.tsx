@@ -990,8 +990,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                        <SelectValue placeholder="اختر نوع الفاتورة" />
                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية) (saudi citizens)</SelectItem>
-                        <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا) (non Saudi)</SelectItem>
+                        <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية) (مواطنين سعوديين)</SelectItem>
+                        <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا) (غير سعوديين)</SelectItem>
                       </SelectContent>
                    </Select>
                    <div className="text-xs text-muted-foreground">
@@ -1152,8 +1152,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                          <SelectValue placeholder="اختر نوع الفاتورة" />
                        </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية) (saudi citizens)</SelectItem>
-                          <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا) (non Saudi)</SelectItem>
+                          <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية) (مواطنين سعوديين)</SelectItem>
+                          <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا) (غير سعوديين)</SelectItem>
                         </SelectContent>
                      </Select>
                      <div className="text-xs text-muted-foreground">
