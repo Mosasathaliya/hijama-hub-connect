@@ -989,10 +989,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                      <SelectTrigger className="w-full">
                        <SelectValue placeholder="اختر نوع الفاتورة" />
                      </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية)</SelectItem>
-                       <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا)</SelectItem>
-                     </SelectContent>
+                      <SelectContent>
+                        <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية) (saudi citizens)</SelectItem>
+                        <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا) (non Saudi)</SelectItem>
+                      </SelectContent>
                    </Select>
                    <div className="text-xs text-muted-foreground">
                      {isTaxable ? "سيتم إنشاء فاتورة متوافقة مع زاتكا" : "سيتم إنشاء فاتورة عادية"}
@@ -1151,10 +1151,10 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                        <SelectTrigger>
                          <SelectValue placeholder="اختر نوع الفاتورة" />
                        </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية)</SelectItem>
-                         <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا)</SelectItem>
-                       </SelectContent>
+                        <SelectContent>
+                          <SelectItem value="non-taxable">غير خاضعة للضريبة (فاتورة عادية) (saudi citizens)</SelectItem>
+                          <SelectItem value="taxable">خاضعة للضريبة (فاتورة زاتكا) (non Saudi)</SelectItem>
+                        </SelectContent>
                      </Select>
                      <div className="text-xs text-muted-foreground">
                        {editIsTaxable ? "سيتم إنشاء فاتورة متوافقة مع زاتكا" : "سيتم إنشاء فاتورة عادية"}
