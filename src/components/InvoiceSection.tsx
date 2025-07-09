@@ -203,13 +203,15 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
         const isTaxable = payment.is_taxable || false;
         
         // Calculate amounts based on taxable status
-        let subtotal, vatAmount;
+        let subtotal, vatAmount, totalAmount;
         if (isTaxable) {
-          subtotal = Number(payment.amount) / 1.15; // Remove VAT to get subtotal
-          vatAmount = Number(payment.amount) - subtotal; // 15% VAT
+          subtotal = Number(payment.amount); // Base amount before tax
+          vatAmount = subtotal * 0.15; // 15% VAT on subtotal
+          totalAmount = subtotal + vatAmount; // Total including VAT
         } else {
           subtotal = Number(payment.amount); // No VAT calculation
           vatAmount = 0; // No VAT for non-taxable
+          totalAmount = Number(payment.amount); // Total is same as subtotal
         }
         
         const invoice: Invoice = {
@@ -231,7 +233,7 @@ const InvoiceSection = ({ onBack }: InvoiceSectionProps) => {
           due_date: payment.paid_at, // Same day for immediate payment
           subtotal: subtotal,
           vat_amount: vatAmount,
-          total_amount: Number(payment.amount),
+          total_amount: totalAmount,
           qr_code: ""
         };
 
