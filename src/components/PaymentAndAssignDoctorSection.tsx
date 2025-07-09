@@ -105,9 +105,6 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPaymentMethodDialog, setShowPaymentMethodDialog] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
-  const [cashAmount, setCashAmount] = useState("");
-  const [cardAmount, setCardAmount] = useState("");
-  const [transferAmount, setTransferAmount] = useState("");
   const [editingPayment, setEditingPayment] = useState<TodayPayment | null>(null);
   const [editCupsCount, setEditCupsCount] = useState("");
   const [editDoctor, setEditDoctor] = useState("");
@@ -800,33 +797,13 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       console.log("Points count:", pointsCount);
       console.log("Selected coupon:", selectedCoupon);
 
-      // Determine payment method based on amounts entered
-      let paymentMethod = "نقداً"; // Default
-      const cashAmt = parseFloat(cashAmount || "0");
-      const cardAmt = parseFloat(cardAmount || "0");  
-      const transferAmt = parseFloat(transferAmount || "0");
-      
-      if (cashAmt > 0 && cardAmt > 0 && transferAmt > 0) {
-        paymentMethod = `مختلط: ${cashAmt} نقداً + ${cardAmt} كارت + ${transferAmt} تحويل`;
-      } else if (cashAmt > 0 && cardAmt > 0) {
-        paymentMethod = `مختلط: ${cashAmt} نقداً + ${cardAmt} كارت`;
-      } else if (cashAmt > 0 && transferAmt > 0) {
-        paymentMethod = `مختلط: ${cashAmt} نقداً + ${transferAmt} تحويل`;
-      } else if (cardAmt > 0 && transferAmt > 0) {
-        paymentMethod = `مختلط: ${cardAmt} كارت + ${transferAmt} تحويل`;
-      } else if (cardAmt > 0) {
-        paymentMethod = "البطاقة الائتمانية";
-      } else if (transferAmt > 0) {
-        paymentMethod = "تحويل بنكي";
-      }
-
       const { error: paymentError } = await supabase
         .from("payments")
         .update({
           doctor_id: selectedDoctor,
           amount: finalAmount,
           payment_status: "completed",
-          payment_method: paymentMethod,
+          payment_method: "cash", // Default to cash, could be made selectable
           paid_at: new Date().toISOString(),
           coupon_id: selectedCoupon && selectedCoupon !== "none" ? selectedCoupon : null,
           is_taxable: isTaxable
@@ -852,9 +829,6 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       setSelectedCoupon("");
       setIsTaxable(false);
       setPaymentAmount(0);
-      setCashAmount("");
-      setCardAmount("");
-      setTransferAmount("");
 
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -1205,109 +1179,20 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                 </CardContent>
               </Card>
 
-               {/* Payment Methods */}
-               <Card>
-                 <CardHeader>
-                   <CardTitle className="text-sm flex items-center gap-2">
-                     <CreditCard className="w-4 h-4" />
-                     طريقة الدفع
-                   </CardTitle>
-                 </CardHeader>
-                 <CardContent className="space-y-4">
-                   <div className="text-sm text-muted-foreground mb-3">
-                     حدد طريقة الدفع المستخدمة وأدخل المبلغ لكل طريقة
-                   </div>
-                   
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     {/* Cash Payment */}
-                     <div className="space-y-2">
-                       <Label htmlFor="cash-amount" className="flex items-center gap-2">
-                         <DollarSign className="w-4 h-4" />
-                         نقداً
-                       </Label>
-                       <Input
-                         id="cash-amount"
-                         type="number"
-                         placeholder="0"
-                         value={cashAmount}
-                         onChange={(e) => setCashAmount(e.target.value)}
-                         min="0"
-                         step="0.01"
-                       />
-                     </div>
-
-                     {/* Card Payment */}
-                     <div className="space-y-2">
-                       <Label htmlFor="card-amount" className="flex items-center gap-2">
-                         <CreditCard className="w-4 h-4" />
-                         البطاقة الائتمانية
-                       </Label>
-                       <Input
-                         id="card-amount"
-                         type="number"
-                         placeholder="0"
-                         value={cardAmount}
-                         onChange={(e) => setCardAmount(e.target.value)}
-                         min="0"
-                         step="0.01"
-                       />
-                     </div>
-
-                     {/* Bank Transfer */}
-                     <div className="space-y-2">
-                       <Label htmlFor="transfer-amount" className="flex items-center gap-2">
-                         <User className="w-4 h-4" />
-                         تحويل بنكي
-                       </Label>
-                       <Input
-                         id="transfer-amount"
-                         type="number"
-                         placeholder="0"
-                         value={transferAmount}
-                         onChange={(e) => setTransferAmount(e.target.value)}
-                         min="0"
-                         step="0.01"
-                       />
-                     </div>
-                   </div>
-
-                   {/* Total Check */}
-                   <div className="bg-blue-50 p-3 rounded-md">
-                     <div className="flex justify-between items-center">
-                       <span className="text-sm font-medium">إجمالي المبالغ المدخلة:</span>
-                       <span className="font-bold text-blue-700">
-                         {(parseFloat(cashAmount || "0") + parseFloat(cardAmount || "0") + parseFloat(transferAmount || "0")).toFixed(2)} ريال
-                       </span>
-                     </div>
-                     <div className="flex justify-between items-center mt-1">
-                       <span className="text-sm text-muted-foreground">المبلغ المطلوب:</span>
-                       <span className="text-sm font-medium">
-                         {paymentAmount} ريال
-                       </span>
-                     </div>
-                     {Math.abs((parseFloat(cashAmount || "0") + parseFloat(cardAmount || "0") + parseFloat(transferAmount || "0")) - paymentAmount) > 0.01 && (
-                       <div className="text-sm text-red-600 mt-1">
-                         ⚠️ المبلغ المدخل لا يطابق المبلغ المطلوب
-                       </div>
-                     )}
-                   </div>
-                 </CardContent>
-               </Card>
-
-               {/* Actions */}
-               <div className="flex gap-3 pt-4">
-                 <Button
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <Button 
                   variant="outline" 
                   onClick={() => setShowAssignDialog(false)}
                   className="flex-1"
                 >
                   إلغاء
                 </Button>
-                 <Button 
-                   variant="healing" 
-                   onClick={processPaymentAndAssignDoctor}
-                   className="flex-1 flex items-center gap-2"
-                   disabled={!selectedDoctor || Math.abs((parseFloat(cashAmount || "0") + parseFloat(cardAmount || "0") + parseFloat(transferAmount || "0")) - paymentAmount) > 0.01}
+                <Button 
+                  variant="healing" 
+                  onClick={processPaymentAndAssignDoctor}
+                  className="flex-1 flex items-center gap-2"
+                  disabled={!selectedDoctor}
                 >
                   <CreditCard className="w-4 h-4" />
                   تأكيد الدفع وتعيين الطبيب
