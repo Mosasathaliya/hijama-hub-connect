@@ -102,7 +102,13 @@ const Dashboard = () => {
   }
 
   if (activeSection === "المدفوعات") {
-    return <PaymentsSection onBack={() => setActiveSection(null)} />;
+    return <PaymentsSection 
+      onBack={() => setActiveSection(null)} 
+      onNavigateToPayment={(data) => {
+        setPaymentData(data);
+        setActiveSection("دفع وتعيين طبيب");
+      }} 
+    />;
   }
 
   if (activeSection === "تاريخ المرضى") {

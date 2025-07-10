@@ -13,7 +13,9 @@ import {
   DollarSign,
   User,
   Stethoscope,
-  Download
+  Download,
+  Edit,
+  Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,10 +35,12 @@ interface Payment {
 
 interface PaymentsSectionProps {
   onBack?: () => void;
+  onNavigateToPayment?: (data: any) => void;
 }
 
-const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
+const PaymentsSection = ({ onBack, onNavigateToPayment }: PaymentsSectionProps) => {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -59,6 +63,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
 
   useEffect(() => {
     fetchPayments();
+    fetchPendingPayments();
   }, []);
 
   useEffect(() => {
@@ -173,6 +178,88 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
     fetchPayments(today, today);
   };
 
+  const fetchPendingPayments = async () => {
+    try {
+      // Fetch pending payments
+      const { data: paymentData, error } = await supabase
+        .from("payments")
+        .select(`
+          *,
+          doctors (
+            name
+          )
+        `)
+        .eq("payment_status", "pending");
+
+      if (error) throw error;
+
+      // Fetch patients from both gender tables
+      const [maleResults, femaleResults] = await Promise.all([
+        supabase
+          .from('male_patients')
+          .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
+          .eq('status', 'payment_pending'),
+        supabase
+          .from('female_patients')
+          .select('id, patient_name, patient_phone, preferred_appointment_date, preferred_appointment_time, chief_complaint')
+          .eq('status', 'payment_pending')
+      ]);
+
+      const allPatients = [
+        ...(maleResults.data || []).map(p => ({ ...p, gender: 'male', table: 'male_patients' })),
+        ...(femaleResults.data || []).map(p => ({ ...p, gender: 'female', table: 'female_patients' }))
+      ];
+
+      // Match patients with their payment records
+      const paymentsWithPatients = [];
+      
+      for (const payment of paymentData || []) {
+        const patient = allPatients.find(p => 
+          p.id === payment.patient_id && 
+          (payment.patient_table === p.table)
+        );
+        
+        if (patient) {
+          paymentsWithPatients.push({
+            id: payment.patient_id,
+            patient_name: patient.patient_name,
+            patient_phone: patient.patient_phone,
+            preferred_appointment_date: patient.preferred_appointment_date,
+            preferred_appointment_time: patient.preferred_appointment_time,
+            chief_complaint: patient.chief_complaint,
+            hijama_points_count: payment.hijama_points_count,
+            calculated_price: payment.amount,
+            payment_id: payment.id,
+            patient_table: patient.table
+          });
+        }
+      }
+
+      setPendingPayments(paymentsWithPatients);
+    } catch (error) {
+      console.error("Error fetching pending payments:", error);
+      toast({
+        title: "خطأ في جلب البيانات",
+        description: "حدث خطأ أثناء جلب بيانات المدفوعات المعلقة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePaymentNavigation = (patient: any) => {
+    if (onNavigateToPayment) {
+      onNavigateToPayment({
+        patientId: patient.id,
+        patientName: patient.patient_name,
+        patientPhone: patient.patient_phone,
+        appointmentDate: patient.preferred_appointment_date,
+        appointmentTime: patient.preferred_appointment_time,
+        hijamaPointsCount: patient.hijama_points_count,
+        calculatedPrice: patient.calculated_price
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -187,7 +274,10 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
             <p className="text-muted-foreground">عرض وإدارة جميع المدفوعات</p>
           </div>
         </div>
-        <Button onClick={() => fetchPayments()} variant="outline">
+        <Button onClick={() => {
+          fetchPayments();
+          fetchPendingPayments();
+        }} variant="outline">
           تحديث
         </Button>
       </div>
@@ -270,15 +360,15 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
         </Card>
       </div>
 
-      {/* Payments Table */}
+      {/* Today's Payments */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-green-600" />
-            المدفوعات ({filteredPayments.length})
+            المدفوعات اليوم ({filteredPayments.length})
           </CardTitle>
           <CardDescription>
-            عرض المدفوعات من {format(new Date(fromDate), "dd/MM/yyyy")} إلى {format(new Date(toDate), "dd/MM/yyyy")}
+            المرضى الذين تم دفعهم وتعيين طبيب لهم اليوم
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -287,7 +377,7 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
           ) : filteredPayments.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا يوجد مدفوعات في هذه الفترة</p>
+              <p className="text-muted-foreground">لا يوجد مدفوعات اليوم</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -296,12 +386,11 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
                   <TableRow>
                     <TableHead>اسم المريض</TableHead>
                     <TableHead>رقم الهاتف</TableHead>
-                    <TableHead>الطبيب</TableHead>
-                    <TableHead>المبلغ</TableHead>
+                    <TableHead>الطبيب المخصص</TableHead>
+                    <TableHead>المبلغ المدفوع</TableHead>
                     <TableHead>عدد النقاط</TableHead>
-                    <TableHead>طريقة الدفع</TableHead>
-                    <TableHead>تاريخ الدفع</TableHead>
-                    <TableHead>الوقت</TableHead>
+                    <TableHead>وقت الدفع</TableHead>
+                    <TableHead>الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -332,15 +421,98 @@ const PaymentsSection = ({ onBack }: PaymentsSectionProps) => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {getPaymentMethodInArabic(payment.payment_method)}
+                        {format(new Date(payment.paid_at), "HH:mm")}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4" />
+                          تعديل
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Payments */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-orange-600" />
+            المدفوعات المعلقة ({pendingPayments.length})
+          </CardTitle>
+          <CardDescription>
+            المرضى الذين ينتظرون الدفع وتعيين طبيب
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">جاري التحميل...</div>
+          ) : pendingPayments.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">لا توجد مدفوعات معلقة</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>اسم المريض</TableHead>
+                    <TableHead>رقم الهاتف</TableHead>
+                    <TableHead>تاريخ الموعد</TableHead>
+                    <TableHead>الوقت</TableHead>
+                    <TableHead>نقاط الحجامة</TableHead>
+                    <TableHead>المبلغ المتوقع</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>الإجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingPayments.map((patient) => (
+                    <TableRow key={patient.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          {patient.patient_name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{patient.patient_phone}</TableCell>
+                      <TableCell>
+                        {patient.preferred_appointment_date ? 
+                          format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy") 
+                          : 'غير محدد'
+                        }
+                      </TableCell>
+                      <TableCell>{patient.preferred_appointment_time || 'غير محدد'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {patient.hijama_points_count || 0} نقطة
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(payment.paid_at), "dd/MM/yyyy")}
+                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                          <DollarSign className="w-3 h-3 mr-1" />
+                          {Number(patient.calculated_price || 0).toFixed(2)} ريال
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(payment.paid_at), "HH:mm")}
+                        <Badge variant="outline" className="text-orange-600">
+                          في انتظار الدفع
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="healing" 
+                          size="sm"
+                          onClick={() => handlePaymentNavigation(patient)}
+                        >
+                          دفع وتعيين طبيب
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
