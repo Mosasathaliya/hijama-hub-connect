@@ -105,6 +105,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPaymentMethodDialog, setShowPaymentMethodDialog] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [cashAmount, setCashAmount] = useState("");
+  const [cardAmount, setCardAmount] = useState("");
   const [editingPayment, setEditingPayment] = useState<TodayPayment | null>(null);
   const [editCupsCount, setEditCupsCount] = useState("");
   const [editDoctor, setEditDoctor] = useState("");
@@ -593,6 +595,31 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   const confirmSaveEditPayment = async () => {
     if (!editingPayment || !selectedPaymentMethod) return;
 
+    // Validate split payment amounts
+    if (selectedPaymentMethod === "cash_and_card") {
+      const cashValue = parseFloat(cashAmount) || 0;
+      const cardValue = parseFloat(cardAmount) || 0;
+      const totalSplit = cashValue + cardValue;
+      
+      if (totalSplit !== finalPrice) {
+        toast({
+          title: "خطأ في المبالغ",
+          description: `مجموع مبلغ النقد والبطاقة (${totalSplit}) يجب أن يساوي المبلغ الإجمالي (${finalPrice})`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (cashValue <= 0 && cardValue <= 0) {
+        toast({
+          title: "خطأ في المبالغ",
+          description: "يجب إدخال مبلغ صحيح للنقد أو البطاقة",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       // If a coupon is selected, update its used count
       if (editSelectedCoupon) {
@@ -610,6 +637,16 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         }
       }
 
+      // Prepare payment method data
+      let paymentMethodData = selectedPaymentMethod;
+      if (selectedPaymentMethod === "cash_and_card") {
+        paymentMethodData = JSON.stringify({
+          method: "cash_and_card",
+          cash_amount: parseFloat(cashAmount) || 0,
+          card_amount: parseFloat(cardAmount) || 0
+        });
+      }
+
       // Update payment amount and hijama points count
       const { error: paymentError } = await supabase
         .from("payments")
@@ -618,7 +655,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           hijama_points_count: parseInt(editCupsCount),
           doctor_id: editDoctor,
           is_taxable: editIsTaxable,
-          payment_method: selectedPaymentMethod, // Now save the selected payment method
+          payment_method: paymentMethodData,
           coupon_id: editSelectedCoupon && editSelectedCoupon !== "none" ? editSelectedCoupon : null
         })
         .eq("id", editingPayment.id);
@@ -668,6 +705,8 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       setShowPaymentMethodDialog(false);
       setEditingPayment(null);
       setSelectedPaymentMethod("");
+      setCashAmount("");
+      setCardAmount("");
     } catch (error) {
       console.error("Error updating payment:", error);
       toast({
@@ -1404,6 +1443,50 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
               <CreditCard className="w-4 h-4" />
               تحويل بنكي
             </Button>
+            
+            <Button
+              variant={selectedPaymentMethod === "cash_and_card" ? "default" : "outline"}
+              onClick={() => setSelectedPaymentMethod("cash_and_card")}
+              className="w-full flex items-center gap-2 justify-start"
+            >
+              <CreditCard className="w-4 h-4" />
+              نقداً وبطاقة
+            </Button>
+            
+            {selectedPaymentMethod === "cash_and_card" && (
+              <div className="space-y-3 p-4 bg-muted rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="cash-amount">المبلغ المدفوع نقداً</Label>
+                  <Input
+                    id="cash-amount"
+                    type="number"
+                    placeholder="0.00"
+                    value={cashAmount}
+                    onChange={(e) => setCashAmount(e.target.value)}
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="card-amount">المبلغ المدفوع بالبطاقة</Label>
+                  <Input
+                    id="card-amount"
+                    type="number"
+                    placeholder="0.00"
+                    value={cardAmount}
+                    onChange={(e) => setCardAmount(e.target.value)}
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  المبلغ الإجمالي المطلوب: {finalPrice} ريال
+                </div>
+                <div className="text-sm">
+                  مجموع المبالغ المدخلة: {((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0)).toFixed(2)} ريال
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="flex gap-3 pt-4">
