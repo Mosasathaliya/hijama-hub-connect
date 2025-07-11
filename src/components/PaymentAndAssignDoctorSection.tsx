@@ -550,25 +550,23 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
   };
 
   const calculatePaymentWithCoupon = (baseAmount: number) => {
-    if (!selectedCoupon) {
-      setPaymentAmount(baseAmount);
-      return baseAmount;
-    }
-
-    const coupon = coupons.find(c => c.id === selectedCoupon);
-    if (!coupon) {
-      setPaymentAmount(baseAmount);
-      return baseAmount;
-    }
-
     let discountAmount = 0;
-    if (coupon.discount_type === "percentage") {
-      discountAmount = (baseAmount * coupon.discount_value) / 100;
-    } else {
-      discountAmount = coupon.discount_value;
+    
+    if (selectedCoupon && selectedCoupon !== "none") {
+      const coupon = coupons.find(c => c.id === selectedCoupon);
+      if (coupon) {
+        if (coupon.discount_type === "percentage") {
+          discountAmount = (baseAmount * coupon.discount_value) / 100;
+        } else {
+          discountAmount = coupon.discount_value;
+        }
+      }
     }
 
-    const finalAmount = Math.max(0, baseAmount - discountAmount);
+    const amountAfterDiscount = Math.max(0, baseAmount - discountAmount);
+    const taxAmount = isTaxable ? (amountAfterDiscount * 15) / 100 : 0;
+    const finalAmount = amountAfterDiscount + taxAmount;
+    
     setPaymentAmount(finalAmount);
     return finalAmount;
   };
@@ -589,29 +587,42 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     }
   };
 
-  // Calculate payment amount for pending patients when coupon changes
+  // Calculate tax amount for display
+  const getTaxAmount = () => {
+    if (!isTaxable) return 0;
+    
+    const baseAmount = paymentData ? paymentData.calculatedPrice : (selectedPatient?.calculated_price || 0);
+    const discountAmount = getDiscountAmount();
+    const amountAfterDiscount = baseAmount - discountAmount;
+    
+    return (amountAfterDiscount * 15) / 100; // 15% VAT in Saudi Arabia
+  };
+
+  // Calculate final amount with tax and discount
+  const getFinalAmountWithTax = () => {
+    const baseAmount = paymentData ? paymentData.calculatedPrice : (selectedPatient?.calculated_price || 0);
+    const discountAmount = getDiscountAmount();
+    const amountAfterDiscount = baseAmount - discountAmount;
+    const taxAmount = isTaxable ? (amountAfterDiscount * 15) / 100 : 0;
+    
+    return amountAfterDiscount + taxAmount;
+  };
+
+  // Calculate payment amount for pending patients when coupon or tax changes
   useEffect(() => {
     if (selectedPatient && !paymentData) {
-      const baseAmount = selectedPatient.calculated_price || 0;
-      if (selectedCoupon && selectedCoupon !== "none") {
-        const coupon = coupons.find(c => c.id === selectedCoupon);
-        if (coupon) {
-          let discountAmount = 0;
-          if (coupon.discount_type === "percentage") {
-            discountAmount = (baseAmount * coupon.discount_value) / 100;
-          } else {
-            discountAmount = coupon.discount_value;
-          }
-          const finalAmount = Math.max(0, baseAmount - discountAmount);
-          setPaymentAmount(finalAmount);
-        } else {
-          setPaymentAmount(baseAmount);
-        }
-      } else {
-        setPaymentAmount(baseAmount);
-      }
+      const finalAmount = getFinalAmountWithTax();
+      setPaymentAmount(finalAmount);
     }
-  }, [selectedCoupon, selectedPatient, coupons]);
+  }, [selectedCoupon, selectedPatient, coupons, isTaxable]);
+
+  // Calculate payment amount when tax or coupon changes for paymentData
+  useEffect(() => {
+    if (paymentData) {
+      const finalAmount = getFinalAmountWithTax();
+      setPaymentAmount(finalAmount);
+    }
+  }, [selectedCoupon, paymentData, isTaxable]);
 
   const handleEditPayment = (payment: TodayPayment) => {
     console.log("Opening edit dialog, coupons available:", coupons.length);
@@ -1296,6 +1307,14 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                           </span>
                         </div>
                       )}
+                      {isTaxable && (
+                        <div className="flex items-center justify-between text-orange-600">
+                          <span>ضريبة القيمة المضافة (15%):</span>
+                          <span className="font-medium">
+                            +{getTaxAmount()} ريال
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between text-lg font-bold border-t pt-2">
                         <span>المبلغ النهائي:</span>
                         <span className="text-primary">
@@ -1314,6 +1333,14 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                           <span>قيمة الخصم:</span>
                           <span className="font-medium">
                             -{getDiscountAmount()} ريال
+                          </span>
+                        </div>
+                      )}
+                      {isTaxable && (
+                        <div className="flex items-center justify-between text-orange-600">
+                          <span>ضريبة القيمة المضافة (15%):</span>
+                          <span className="font-medium">
+                            +{getTaxAmount()} ريال
                           </span>
                         </div>
                       )}
