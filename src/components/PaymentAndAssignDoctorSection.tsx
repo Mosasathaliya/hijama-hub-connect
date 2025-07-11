@@ -573,6 +573,46 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
     return finalAmount;
   };
 
+  // Calculate discount amount for display
+  const getDiscountAmount = () => {
+    if (!selectedCoupon || selectedCoupon === "none") return 0;
+    
+    const coupon = coupons.find(c => c.id === selectedCoupon);
+    if (!coupon) return 0;
+    
+    const baseAmount = paymentData ? paymentData.calculatedPrice : (selectedPatient?.calculated_price || 0);
+    
+    if (coupon.discount_type === "percentage") {
+      return (baseAmount * coupon.discount_value) / 100;
+    } else {
+      return coupon.discount_value;
+    }
+  };
+
+  // Calculate payment amount for pending patients when coupon changes
+  useEffect(() => {
+    if (selectedPatient && !paymentData) {
+      const baseAmount = selectedPatient.calculated_price || 0;
+      if (selectedCoupon && selectedCoupon !== "none") {
+        const coupon = coupons.find(c => c.id === selectedCoupon);
+        if (coupon) {
+          let discountAmount = 0;
+          if (coupon.discount_type === "percentage") {
+            discountAmount = (baseAmount * coupon.discount_value) / 100;
+          } else {
+            discountAmount = coupon.discount_value;
+          }
+          const finalAmount = Math.max(0, baseAmount - discountAmount);
+          setPaymentAmount(finalAmount);
+        } else {
+          setPaymentAmount(baseAmount);
+        }
+      } else {
+        setPaymentAmount(baseAmount);
+      }
+    }
+  }, [selectedCoupon, selectedPatient, coupons]);
+
   const handleEditPayment = (payment: TodayPayment) => {
     console.log("Opening edit dialog, coupons available:", coupons.length);
     setEditingPayment(payment);
@@ -1252,7 +1292,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                         <div className="flex items-center justify-between text-green-600">
                           <span>قيمة الخصم:</span>
                           <span className="font-medium">
-                            -{(paymentData.calculatedPrice - paymentAmount)} ريال
+                            -{getDiscountAmount()} ريال
                           </span>
                         </div>
                       )}
@@ -1273,7 +1313,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                         <div className="flex items-center justify-between text-green-600">
                           <span>قيمة الخصم:</span>
                           <span className="font-medium">
-                            -{((selectedPatient.calculated_price || 0) - paymentAmount)} ريال
+                            -{getDiscountAmount()} ريال
                           </span>
                         </div>
                       )}
