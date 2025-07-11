@@ -771,6 +771,46 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       return;
     }
 
+    // Show payment method selection dialog first
+    setShowPaymentMethodDialog(true);
+  };
+
+  const completePaymentAndAssignDoctor = async () => {
+    if (!selectedPaymentMethod) {
+      toast({
+        title: "طريقة الدفع مطلوبة",
+        description: "يرجى اختيار طريقة الدفع قبل المتابعة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate cash and card amounts if split payment is selected
+    if (selectedPaymentMethod === "cash_and_card") {
+      const cashValue = parseFloat(cashAmount) || 0;
+      const cardValue = parseFloat(cardAmount) || 0;
+      const totalSplit = cashValue + cardValue;
+      const expectedAmount = paymentData ? paymentAmount : (selectedPatient?.calculated_price || 0);
+      
+      if (totalSplit !== expectedAmount) {
+        toast({
+          title: "خطأ في المبالغ",
+          description: `مجموع مبلغ النقد والبطاقة (${totalSplit}) يجب أن يساوي المبلغ الإجمالي (${expectedAmount})`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (cashValue <= 0 && cardValue <= 0) {
+        toast({
+          title: "خطأ في المبالغ",
+          description: "يجب إدخال مبلغ صحيح للنقد أو البطاقة",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       console.log("Processing payment for patient:", selectedPatient.id);
       console.log("Selected doctor:", selectedDoctor);
@@ -827,6 +867,16 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         }
       }
 
+      // Prepare payment method data
+      let paymentMethodData = selectedPaymentMethod;
+      if (selectedPaymentMethod === "cash_and_card") {
+        paymentMethodData = JSON.stringify({
+          method: "cash_and_card",
+          cash_amount: parseFloat(cashAmount) || 0,
+          card_amount: parseFloat(cardAmount) || 0
+        });
+      }
+
       // Update existing payment record instead of creating new one
       const finalAmount = paymentData ? paymentAmount : (selectedPatient.calculated_price || 0);
       const pointsCount = selectedPatient.hijama_points_count || 0;
@@ -842,7 +892,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
           doctor_id: selectedDoctor,
           amount: finalAmount,
           payment_status: "completed",
-          payment_method: "cash", // Default to cash, could be made selectable
+          payment_method: paymentMethodData,
           paid_at: new Date().toISOString(),
           coupon_id: selectedCoupon && selectedCoupon !== "none" ? selectedCoupon : null,
           is_taxable: isTaxable
@@ -863,11 +913,15 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
       fetchPendingPayments();
       fetchTodayPayments();
       setShowAssignDialog(false);
+      setShowPaymentMethodDialog(false);
       setSelectedPatient(null);
       setSelectedDoctor("");
       setSelectedCoupon("");
       setIsTaxable(false);
       setPaymentAmount(0);
+      setSelectedPaymentMethod("");
+      setCashAmount("");
+      setCardAmount("");
 
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -1480,7 +1534,7 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   />
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  المبلغ الإجمالي المطلوب: {finalPrice} ريال
+                  المبلغ الإجمالي المطلوب: {editingPayment ? finalPrice : (paymentData ? paymentAmount : (selectedPatient?.calculated_price || 0))} ريال
                 </div>
                 <div className="text-sm">
                   مجموع المبالغ المدخلة: {((parseFloat(cashAmount) || 0) + (parseFloat(cardAmount) || 0)).toFixed(2)} ريال
@@ -1502,11 +1556,11 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
             </Button>
             <Button 
               variant="healing" 
-              onClick={confirmSaveEditPayment}
+              onClick={editingPayment ? confirmSaveEditPayment : completePaymentAndAssignDoctor}
               className="flex-1"
               disabled={!selectedPaymentMethod}
             >
-              تأكيد الحفظ
+              {editingPayment ? "تأكيد الحفظ" : "تأكيد الدفع"}
             </Button>
           </div>
         </DialogContent>
