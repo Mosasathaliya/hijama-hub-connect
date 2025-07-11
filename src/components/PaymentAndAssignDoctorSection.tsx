@@ -1242,13 +1242,13 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {paymentData && (
+                  {paymentData ? (
                     <>
                       <div className="flex items-center justify-between">
                         <span>المبلغ الأساسي:</span>
                         <span className="font-medium">{paymentData.calculatedPrice} ريال</span>
                       </div>
-                      {selectedCoupon && (
+                      {selectedCoupon && selectedCoupon !== "none" && (
                         <div className="flex items-center justify-between text-green-600">
                           <span>قيمة الخصم:</span>
                           <span className="font-medium">
@@ -1263,8 +1263,29 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
                         </span>
                       </div>
                     </>
+                  ) : selectedPatient && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span>المبلغ الأساسي:</span>
+                        <span className="font-medium">{selectedPatient.calculated_price || 0} ريال</span>
+                      </div>
+                      {selectedCoupon && selectedCoupon !== "none" && (
+                        <div className="flex items-center justify-between text-green-600">
+                          <span>قيمة الخصم:</span>
+                          <span className="font-medium">
+                            -{((selectedPatient.calculated_price || 0) - paymentAmount)} ريال
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-lg font-bold border-t pt-2">
+                        <span>المبلغ النهائي:</span>
+                        <span className="text-primary">
+                          {paymentAmount || selectedPatient.calculated_price || 0} ريال
+                        </span>
+                      </div>
+                    </>
                   )}
-                  {!paymentData && (
+                  {!paymentData && !selectedPatient && (
                     <div className="text-center text-muted-foreground">
                       يتم تحديد المبلغ من العلاج
                     </div>
