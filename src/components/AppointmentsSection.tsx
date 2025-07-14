@@ -120,6 +120,9 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const filterAppointments = () => {
     let filtered = [...appointments];
     
+    // Filter out payment_pending status
+    filtered = filtered.filter(apt => apt.status !== 'payment_pending');
+    
     const today = format(new Date(), 'yyyy-MM-dd');
     console.log('Today\'s date:', today);
     console.log('All appointments:', appointments.map(apt => ({ name: apt.patient_name, date: apt.preferred_appointment_date })));
