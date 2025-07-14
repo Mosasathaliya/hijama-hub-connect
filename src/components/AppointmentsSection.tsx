@@ -303,13 +303,13 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const getAppointmentsByDate = () => {
     const today = new Date();
     const todayAppointments = appointments.filter(apt => 
-      apt.preferred_appointment_date === format(today, 'yyyy-MM-dd')
+      apt.preferred_appointment_date === format(today, 'yyyy-MM-dd') && apt.status !== 'payment_pending'
     );
     const upcomingAppointments = appointments.filter(apt => 
-      new Date(apt.preferred_appointment_date) > today
+      new Date(apt.preferred_appointment_date) > today && apt.status !== 'payment_pending'
     );
     const pastAppointments = appointments.filter(apt => 
-      new Date(apt.preferred_appointment_date) < today
+      new Date(apt.preferred_appointment_date) < today && apt.status !== 'payment_pending'
     );
 
     return { todayAppointments, upcomingAppointments, pastAppointments };
