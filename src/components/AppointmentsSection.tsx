@@ -583,49 +583,6 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
         </div>
       </div>
 
-      {/* Today's Appointments */}
-      {todayAppointments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <Calendar className="w-5 h-5" />
-              مواعيد اليوم ({todayAppointments.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todayAppointments.map((appointment) => (
-                <Card key={appointment.id} className="p-4 border-green-200">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold">{appointment.patient_name}</h4>
-                      {getStatusBadge(appointment.status)}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      {appointment.preferred_appointment_time}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="w-3 h-3" />
-                      {appointment.patient_phone}
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => setSelectedAppointment(appointment)}
-                      className="w-full mt-2"
-                    >
-                      <Eye className="w-3 h-3 mr-1" />
-                      عرض التفاصيل
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Date Filter Controls */}
       <Card>
         <CardHeader>
