@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Calendar, 
   Clock, 
@@ -22,7 +23,11 @@ import {
   UserPlus,
   ExternalLink,
   Search,
-  UserCheck
+  UserCheck,
+  Activity,
+  CheckSquare,
+  Hourglass,
+  Plus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +63,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [showTodayOnly, setShowTodayOnly] = useState(false); // Changed to false to show all appointments by default
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Appointment[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -66,6 +72,20 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
   const [appointmentTime, setAppointmentTime] = useState("");
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
+  
+  // New appointment form state
+  const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
+  const [newPatient, setNewPatient] = useState({
+    patient_name: "",
+    patient_phone: "",
+    patient_id: "",
+    age: "",
+    gender: "",
+    preferred_appointment_date: undefined as Date | undefined,
+    preferred_appointment_time: "",
+    chief_complaint: ""
+  });
+  
   const { toast } = useToast();
   const { userPermissions } = useAuth();
 
@@ -115,13 +135,18 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
 
   useEffect(() => {
     filterAppointments();
-  }, [appointments, filterDate, showTodayOnly]);
+  }, [appointments, filterDate, showTodayOnly, statusFilter]);
 
   const filterAppointments = () => {
     let filtered = [...appointments];
     
     // Filter out payment_pending status
     filtered = filtered.filter(apt => apt.status !== 'payment_pending');
+    
+    // Filter by status if selected
+    if (statusFilter) {
+      filtered = filtered.filter(apt => apt.status === statusFilter);
+    }
     
     const today = format(new Date(), 'yyyy-MM-dd');
     console.log('Today\'s date:', today);
@@ -442,6 +467,64 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
     }
   };
 
+  const createNewAppointment = async () => {
+    if (!newPatient.patient_name || !newPatient.patient_phone || !newPatient.patient_id || 
+        !newPatient.age || !newPatient.gender || !newPatient.preferred_appointment_date || 
+        !newPatient.preferred_appointment_time || !newPatient.chief_complaint.trim()) {
+      toast({
+        title: "بيانات ناقصة",
+        description: "يرجى تعبئة جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const tableName = newPatient.gender === 'male' ? 'male_patients' : 'female_patients';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .insert({
+          patient_name: newPatient.patient_name,
+          patient_phone: newPatient.patient_phone,
+          chief_complaint: newPatient.chief_complaint,
+          preferred_appointment_date: format(newPatient.preferred_appointment_date, 'yyyy-MM-dd'),
+          preferred_appointment_time: newPatient.preferred_appointment_time,
+          status: "pending",
+          date_of_birth: newPatient.age ? `${new Date().getFullYear() - parseInt(newPatient.age)}-01-01` : null
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "تم إنشاء الموعد",
+        description: `تم إنشاء موعد جديد للمريض ${newPatient.patient_name}`,
+      });
+
+      // Reset form
+      setNewPatient({
+        patient_name: "",
+        patient_phone: "",
+        patient_id: "",
+        age: "",
+        gender: "",
+        preferred_appointment_date: undefined,
+        preferred_appointment_time: "",
+        chief_complaint: ""
+      });
+
+      fetchAppointments();
+      setShowNewAppointmentForm(false);
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      toast({
+        title: "خطأ في إنشاء الموعد",
+        description: "حدث خطأ أثناء إنشاء الموعد",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (selectedAppointment) {
     return (
       <div className="space-y-6">
@@ -577,6 +660,14 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
               </div>
             </DialogContent>
           </Dialog>
+          <Button
+            onClick={() => setShowNewAppointmentForm(true)}
+            variant="default"
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            طلب موعد جديد
+          </Button>
           <Button onClick={fetchAppointments} variant="outline">
             تحديث
           </Button>
@@ -653,6 +744,47 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                 className="text-muted-foreground"
               >
                 إزالة التصفية
+              </Button>
+            )}
+          </div>
+          
+          {/* Status Filter Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t">
+            <p className="text-sm text-muted-foreground">حالة الموعد:</p>
+            <Button
+              variant={statusFilter === "pending" ? "default" : "outline"}
+              onClick={() => setStatusFilter(statusFilter === "pending" ? "" : "pending")}
+              className="flex items-center gap-2"
+            >
+              <Hourglass className="w-4 h-4" />
+              في الانتظار
+            </Button>
+            
+            <Button
+              variant={statusFilter === "completed" ? "default" : "outline"}
+              onClick={() => setStatusFilter(statusFilter === "completed" ? "" : "completed")}
+              className="flex items-center gap-2"
+            >
+              <CheckSquare className="w-4 h-4" />
+              مكتمل
+            </Button>
+            
+            <Button
+              variant={statusFilter === "in_treatment" ? "default" : "outline"}
+              onClick={() => setStatusFilter(statusFilter === "in_treatment" ? "" : "in_treatment")}
+              className="flex items-center gap-2"
+            >
+              <Activity className="w-4 h-4" />
+              تحت العلاج
+            </Button>
+            
+            {statusFilter && (
+              <Button
+                variant="ghost"
+                onClick={() => setStatusFilter("")}
+                className="text-muted-foreground"
+              >
+                إزالة تصفية الحالة
               </Button>
             )}
           </div>
@@ -916,6 +1048,147 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
                 disabled={!appointmentDate || !appointmentTime || !chiefComplaint.trim()}
               >
                 حجز الموعد
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Appointment Form Dialog */}
+      <Dialog open={showNewAppointmentForm} onOpenChange={setShowNewAppointmentForm}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center">طلب موعد جديد</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Patient Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">معلومات المريض</h3>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">الاسم الكامل *</label>
+                <Input
+                  placeholder="أدخل اسمك الكامل"
+                  value={newPatient.patient_name}
+                  onChange={(e) => setNewPatient({...newPatient, patient_name: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">رقم الهاتف *</label>
+                <Input
+                  placeholder="05xxxxxxxx"
+                  value={newPatient.patient_phone}
+                  onChange={(e) => setNewPatient({...newPatient, patient_phone: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">رقم الهوية *</label>
+                <Input
+                  placeholder="أدخل رقم الهوية"
+                  value={newPatient.patient_id}
+                  onChange={(e) => setNewPatient({...newPatient, patient_id: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">العمر *</label>
+                <Input
+                  type="number"
+                  placeholder="أدخل عمرك"
+                  value={newPatient.age}
+                  onChange={(e) => setNewPatient({...newPatient, age: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">الجنس *</label>
+                <Select
+                  value={newPatient.gender}
+                  onValueChange={(value) => setNewPatient({...newPatient, gender: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الجنس" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">ذكر</SelectItem>
+                    <SelectItem value="female">أنثى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Appointment Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">تفاصيل الموعد</h3>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">تاريخ الموعد المطلوب *</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !newPatient.preferred_appointment_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newPatient.preferred_appointment_date ? format(newPatient.preferred_appointment_date, "dd/MM/yyyy") : "اختر تاريخ الموعد"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={newPatient.preferred_appointment_date}
+                      onSelect={(date) => setNewPatient({...newPatient, preferred_appointment_date: date})}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">وقت الموعد المطلوب *</label>
+                <Input
+                  type="time"
+                  value={newPatient.preferred_appointment_time}
+                  onChange={(e) => setNewPatient({...newPatient, preferred_appointment_time: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">ملاحظات طبية (اختياري)</label>
+                <Textarea
+                  placeholder="اذكر أي معلومات طبية مهمة أو ملاحظات خاصة"
+                  value={newPatient.chief_complaint}
+                  onChange={(e) => setNewPatient({...newPatient, chief_complaint: e.target.value})}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={() => setShowNewAppointmentForm(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={createNewAppointment}
+                variant="healing"
+                className="flex-1"
+                disabled={!newPatient.patient_name || !newPatient.patient_phone || !newPatient.patient_id || 
+                         !newPatient.age || !newPatient.gender || !newPatient.preferred_appointment_date || 
+                         !newPatient.preferred_appointment_time || !newPatient.chief_complaint.trim()}
+              >
+                إنشاء الموعد
               </Button>
             </div>
           </div>
