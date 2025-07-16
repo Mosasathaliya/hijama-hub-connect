@@ -12,7 +12,8 @@ import {
   FileText,
   UserCog,
   DollarSign,
-  MapPin
+  MapPin,
+  Activity
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import FormsManagement from "@/components/FormsManagement";
@@ -29,6 +30,7 @@ import UserManagementSection from "@/components/UserManagementSection";
 import InvoiceSection from "@/components/InvoiceSection";
 import CouponSection from "@/components/CouponSection";
 import ReferralCommissionSection from "@/components/ReferralCommissionSection";
+import UserActivitySection from "@/components/UserActivitySection";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -37,6 +39,26 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Function to log user activity
+  const logActivity = async (activityType: string, sectionName: string, description: string, metadata?: any) => {
+    if (!currentUser) return;
+
+    try {
+      await supabase
+        .from('user_activities')
+        .insert({
+          user_id: currentUser.id,
+          username: currentUser.username,
+          activity_type: activityType,
+          section_name: sectionName,
+          description,
+          metadata
+        });
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  };
 
   // Real-time subscription for user permissions changes
   useEffect(() => {
@@ -125,6 +147,10 @@ const Dashboard = () => {
     return <ReferralCommissionSection onBack={() => setActiveSection(null)} />;
   }
 
+  if (activeSection === "أنشطة المستخدمين") {
+    return <UserActivitySection onBack={() => setActiveSection(null)} />;
+  }
+
   const menuItems = [
     {
       title: "الإدارة",
@@ -210,6 +236,12 @@ const Dashboard = () => {
       icon: DollarSign,
       color: "bg-amber-500",
     },
+    {
+      title: "أنشطة المستخدمين",
+      description: "مراقبة أنشطة المستخدمين في النظام",
+      icon: Activity,
+      color: "bg-slate-500",
+    },
   ];
 
   return (
@@ -268,7 +300,10 @@ const Dashboard = () => {
                   variant="healing" 
                   className="w-full"
                   size="sm"
-                  onClick={() => setActiveSection(item.title)}
+                  onClick={() => {
+                    logActivity('visit', item.title, `دخول إلى قسم ${item.title}`, { timestamp: new Date().toISOString() });
+                    setActiveSection(item.title);
+                  }}
                 >
                   دخول
                 </Button>
