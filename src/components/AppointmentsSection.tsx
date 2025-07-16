@@ -100,11 +100,10 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
         {
           event: '*',
           schema: 'public',
-          table: 'male_patients',
-          filter: 'preferred_appointment_date=not.is.null'
+          table: 'male_patients'
         },
-        () => {
-          console.log('Male patient data changed, refetching...');
+        (payload) => {
+          console.log('Male patient data changed:', payload);
           fetchAppointments();
         }
       )
@@ -117,11 +116,27 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
         {
           event: '*',
           schema: 'public',
-          table: 'female_patients',
-          filter: 'preferred_appointment_date=not.is.null'
+          table: 'female_patients'
         },
-        () => {
-          console.log('Female patient data changed, refetching...');
+        (payload) => {
+          console.log('Female patient data changed:', payload);
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    // Also set up real-time subscription for patient_forms table
+    const patientFormsChannel = supabase
+      .channel('patient-forms-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patient_forms'
+        },
+        (payload) => {
+          console.log('Patient forms data changed:', payload);
           fetchAppointments();
         }
       )
@@ -130,6 +145,7 @@ const AppointmentsSection = ({ onBack }: AppointmentsSectionProps) => {
     return () => {
       supabase.removeChannel(maleChannel);
       supabase.removeChannel(femaleChannel);
+      supabase.removeChannel(patientFormsChannel);
     };
   }, [userPermissions]);
 
