@@ -1003,153 +1003,156 @@ const PaymentAndAssignDoctorSection = ({ onBack, paymentData }: PaymentAndAssign
         </Button>
       </div>
 
-      {/* Today's Payments */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-green-600" />
-            المدفوعات اليوم ({todayPayments.length})
-          </CardTitle>
-          <CardDescription>المرضى الذين تم دفعهم وتعيين طبيب لهم اليوم</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {todayPayments.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا يوجد مدفوعات اليوم</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>اسم المريض</TableHead>
-                  <TableHead>رقم الهاتف</TableHead>
-                  <TableHead>الطبيب المخصص</TableHead>
-                  <TableHead>المبلغ المدفوع</TableHead>
-                  <TableHead>عدد النقاط</TableHead>
-                  <TableHead>وقت الدفع</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {todayPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.patient_name}</TableCell>
-                    <TableCell>{payment.patient_phone}</TableCell>
-                    <TableCell>{payment.doctor_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        {payment.amount} ريال
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {payment.hijama_points_count} نقطة
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{format(new Date(payment.paid_at), "HH:mm")}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditPayment(payment)}
-                        className="flex items-center gap-1"
-                      >
-                        <Edit className="w-3 h-3" />
-                        تعديل
-                      </Button>
-                    </TableCell>
+      {/* Payment Tables Side by Side */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Pending Payments - Left Side */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-orange-600" />
+              المدفوعات المعلقة ({pendingPayments.length})
+            </CardTitle>
+            <CardDescription>المرضى الذين ينتظرون الدفع وتعيين طبيب</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-4">جاري التحميل...</div>
+            ) : pendingPayments.length === 0 ? (
+              <div className="text-center py-8">
+                <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">لا يوجد مدفوعات معلقة حالياً</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>اسم المريض</TableHead>
+                    <TableHead>رقم الهاتف</TableHead>
+                    <TableHead>تاريخ الموعد</TableHead>
+                    <TableHead>الوقت</TableHead>
+                    <TableHead>نقاط الحجامة</TableHead>
+                    <TableHead>المبلغ المتوقع</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>الإجراءات</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {pendingPayments.map((patient) => {
+                    const pointsCount = patient.hijama_points_count || 0;
+                    const expectedPrice = patient.calculated_price || 0;
+                    
+                    return (
+                      <TableRow key={patient.id}>
+                        <TableCell className="font-medium">{patient.patient_name}</TableCell>
+                        <TableCell>{patient.patient_phone}</TableCell>
+                        <TableCell>{format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{patient.preferred_appointment_time}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={pointsCount > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}
+                          >
+                            {pointsCount} نقطة
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="secondary" 
+                            className={expectedPrice > 0 ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"}
+                          >
+                            {expectedPrice} ريال
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                            في انتظار الدفع
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="healing"
+                            size="sm"
+                            onClick={() => handlePayment(patient)}
+                            className="flex items-center gap-1"
+                            disabled={pointsCount === 0}
+                          >
+                            <DollarSign className="w-3 h-3" />
+                            دفع وتعيين طبيب
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Pending Payments */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-orange-600" />
-            المدفوعات المعلقة ({pendingPayments.length})
-          </CardTitle>
-          <CardDescription>المرضى الذين ينتظرون الدفع وتعيين طبيب</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-4">جاري التحميل...</div>
-          ) : pendingPayments.length === 0 ? (
-            <div className="text-center py-8">
-              <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا يوجد مدفوعات معلقة حالياً</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>اسم المريض</TableHead>
-                  <TableHead>رقم الهاتف</TableHead>
-                  <TableHead>تاريخ الموعد</TableHead>
-                  <TableHead>الوقت</TableHead>
-                  <TableHead>نقاط الحجامة</TableHead>
-                  <TableHead>المبلغ المتوقع</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingPayments.map((patient) => {
-                  const pointsCount = patient.hijama_points_count || 0;
-                  const expectedPrice = patient.calculated_price || 0;
-                  
-                  return (
-                    <TableRow key={patient.id}>
-                      <TableCell className="font-medium">{patient.patient_name}</TableCell>
-                      <TableCell>{patient.patient_phone}</TableCell>
-                      <TableCell>{format(new Date(patient.preferred_appointment_date), "dd/MM/yyyy")}</TableCell>
-                      <TableCell>{patient.preferred_appointment_time}</TableCell>
+        {/* Today's Payments - Right Side */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              المدفوعات اليوم ({todayPayments.length})
+            </CardTitle>
+            <CardDescription>المرضى الذين تم دفعهم وتعيين طبيب لهم اليوم</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {todayPayments.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">لا يوجد مدفوعات اليوم</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>اسم المريض</TableHead>
+                    <TableHead>رقم الهاتف</TableHead>
+                    <TableHead>الطبيب المخصص</TableHead>
+                    <TableHead>المبلغ المدفوع</TableHead>
+                    <TableHead>عدد النقاط</TableHead>
+                    <TableHead>وقت الدفع</TableHead>
+                    <TableHead>الإجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {todayPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.patient_name}</TableCell>
+                      <TableCell>{payment.patient_phone}</TableCell>
+                      <TableCell>{payment.doctor_name}</TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="outline"
-                          className={pointsCount > 0 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}
-                        >
-                          {pointsCount} نقطة
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          {payment.amount} ريال
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="secondary" 
-                          className={expectedPrice > 0 ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"}
-                        >
-                          {expectedPrice} ريال
+                        <Badge variant="outline">
+                          {payment.hijama_points_count} نقطة
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                          في انتظار الدفع
-                        </Badge>
-                      </TableCell>
+                      <TableCell>{format(new Date(payment.paid_at), "HH:mm")}</TableCell>
                       <TableCell>
                         <Button
-                          variant="healing"
+                          variant="outline"
                           size="sm"
-                          onClick={() => handlePayment(patient)}
+                          onClick={() => handleEditPayment(payment)}
                           className="flex items-center gap-1"
-                          disabled={pointsCount === 0}
                         >
-                          <DollarSign className="w-3 h-3" />
-                          دفع وتعيين طبيب
+                          <Edit className="w-3 h-3" />
+                          تعديل
                         </Button>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Payment and Doctor Assignment Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
